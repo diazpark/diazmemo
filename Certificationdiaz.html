@@ -1,0 +1,2798 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>자격증 학습 공간</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f4f7f5;
+        --panel: #ffffff;
+        --panel-strong: #edf4ef;
+        --text: #1d2720;
+        --muted: #657166;
+        --line: #dce6df;
+        --accent: #2f7d57;
+        --accent-dark: #236141;
+        --danger: #b94848;
+        --shadow: 0 18px 45px rgba(28, 50, 34, 0.1);
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      button,
+      input,
+      textarea,
+      select {
+        font: inherit;
+      }
+
+      button {
+        border: 0;
+        cursor: pointer;
+      }
+
+      .app {
+        display: grid;
+        grid-template-columns: 310px minmax(0, 1fr);
+        min-height: 100vh;
+      }
+
+      .sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+        border-right: 1px solid var(--line);
+        background: var(--panel);
+        padding: 24px;
+      }
+
+      .brand {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .brand h1 {
+        margin: 0;
+        font-size: 24px;
+        line-height: 1.25;
+      }
+
+      .brand p {
+        margin: 0;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.5;
+      }
+
+      .sidebar-tools-toggle {
+        display: grid;
+        grid-template-columns: auto 1fr;
+        gap: 10px;
+        align-items: center;
+        width: 100%;
+        border: 1px solid rgba(47, 125, 87, 0.24);
+        border-radius: 8px;
+        background: var(--panel-strong);
+        color: var(--text);
+        padding: 10px 12px;
+        text-align: left;
+      }
+
+      .toggle-icon {
+        display: grid;
+        place-items: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #ffffff;
+        font-size: 22px;
+        line-height: 1;
+      }
+
+      .toggle-text {
+        font-size: 14px;
+        font-weight: 800;
+      }
+
+      .sidebar-tools {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdfb;
+        padding: 12px;
+      }
+
+      .sidebar-tools.is-hidden {
+        display: none;
+      }
+
+      .is-hidden {
+        display: none;
+      }
+
+      .subject-form {
+        display: grid;
+        grid-template-columns: 1fr 42px;
+        gap: 8px;
+      }
+
+      .subject-form input,
+      .folder-form input,
+      .search {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdfb;
+        color: var(--text);
+        outline: none;
+      }
+
+      .subject-form input,
+      .folder-form input {
+        min-width: 0;
+        padding: 11px 12px;
+      }
+
+      .search {
+        padding: 11px 13px;
+      }
+
+      .subject-form input:focus,
+      .folder-form input:focus,
+      .search:focus,
+      .note-title:focus,
+      .editor:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(47, 125, 87, 0.12);
+      }
+
+      .add-button {
+        display: grid;
+        place-items: center;
+        border-radius: 8px;
+        background: var(--accent);
+        color: #fff;
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .add-button:hover {
+        background: var(--accent-dark);
+      }
+
+      .folder-panel {
+        display: flex;
+        flex: 1;
+        min-height: 0;
+        flex-direction: column;
+        gap: 10px;
+      }
+
+      .sidebar-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .folder-form {
+        display: grid;
+        grid-template-columns: 1fr 42px;
+        gap: 8px;
+      }
+
+      .folder-list {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        overflow: auto;
+        padding-right: 2px;
+      }
+
+      .folder-item {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 8px;
+        align-items: center;
+        min-height: 38px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        padding: 7px 8px;
+        color: var(--text);
+        text-align: left;
+      }
+
+      .folder-item:hover {
+        background: var(--panel-strong);
+      }
+
+      .folder-item.active {
+        border-color: rgba(47, 125, 87, 0.3);
+        background: var(--panel-strong);
+      }
+
+      .folder-item.drop-target {
+        border-color: rgba(47, 125, 87, 0.75);
+        background: #dfeee5;
+        box-shadow: inset 0 0 0 1px rgba(47, 125, 87, 0.2);
+      }
+
+      .folder-item[draggable="true"] {
+        cursor: grab;
+      }
+
+      .folder-item.dragging {
+        opacity: 0.55;
+        cursor: grabbing;
+      }
+
+      .folder-name {
+        border: 0;
+        background: transparent;
+        color: inherit;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 800;
+        text-align: left;
+      }
+
+      .folder-count {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .folder-delete {
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        background: #f7e9e9;
+        color: var(--danger);
+        font-weight: 800;
+      }
+
+      .folder-delete:hover {
+        background: #f1d8d8;
+      }
+
+      .subject-list {
+        display: none;
+      }
+
+      .subject-item {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+        min-height: 48px;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        background: transparent;
+        padding: 9px 10px;
+        color: var(--text);
+        text-align: left;
+      }
+
+      .tree-subject-item {
+        min-height: 38px;
+        border-radius: 8px;
+        font-size: 13px;
+      }
+
+      .tree-subject-item .subject-name::before {
+        color: var(--muted);
+        content: "파일 ";
+        font-weight: 800;
+      }
+
+      .subject-item:hover {
+        background: var(--panel-strong);
+      }
+
+      .subject-item.active {
+        border-color: rgba(47, 125, 87, 0.3);
+        background: var(--panel-strong);
+      }
+
+      .subject-item[draggable="true"] {
+        cursor: grab;
+      }
+
+      .subject-item.dragging {
+        opacity: 0.55;
+        cursor: grabbing;
+      }
+
+      .subject-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 700;
+      }
+
+      .note-count {
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .main {
+        display: flex;
+        min-width: 0;
+        flex-direction: column;
+        padding: 28px;
+      }
+
+      .workspace {
+        display: flex;
+        min-height: calc(100vh - 56px);
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .browser {
+        display: flex;
+        min-height: calc(100vh - 56px);
+        flex-direction: column;
+        overflow: hidden;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: var(--panel);
+        box-shadow: var(--shadow);
+      }
+
+      .browser-header {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 10px;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 1px solid var(--line);
+        padding: 18px;
+      }
+
+      .browser-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      .quick-form {
+        display: grid;
+        grid-template-columns: minmax(130px, 190px) 42px;
+        gap: 6px;
+      }
+
+      .quick-form input {
+        min-width: 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdfb;
+        color: var(--text);
+        padding: 10px 11px;
+        outline: none;
+      }
+
+      .quick-form input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(47, 125, 87, 0.12);
+      }
+
+      .browser-title {
+        margin: 0;
+        font-size: 22px;
+        line-height: 1.25;
+      }
+
+      .browser-meta {
+        color: var(--muted);
+        font-size: 13px;
+        font-weight: 700;
+      }
+
+      .browser-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(210px, 1fr));
+        gap: 12px;
+        overflow: auto;
+        padding: 18px;
+      }
+
+      .browser-item {
+        display: grid;
+        grid-template-columns: auto minmax(0, 1fr);
+        gap: 12px;
+        align-items: center;
+        min-height: 72px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        padding: 13px;
+        color: var(--text);
+        text-align: left;
+      }
+
+      .browser-item:hover {
+        border-color: rgba(47, 125, 87, 0.42);
+        background: var(--panel-strong);
+      }
+
+      .browser-item[draggable="true"] {
+        cursor: grab;
+      }
+
+      .browser-item.dragging {
+        opacity: 0.55;
+        cursor: grabbing;
+      }
+
+      .browser-item.drop-target,
+      .browser-drop-zone.drop-target {
+        border-color: rgba(47, 125, 87, 0.75);
+        background: #dfeee5;
+        box-shadow: inset 0 0 0 1px rgba(47, 125, 87, 0.2);
+      }
+
+      .browser-drop-zone {
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        color: var(--muted);
+        padding: 10px 12px;
+        font-weight: 800;
+      }
+
+      .browser-icon {
+        display: grid;
+        place-items: center;
+        width: 38px;
+        height: 38px;
+        border-radius: 8px;
+        background: var(--panel-strong);
+        color: var(--accent-dark);
+        font-weight: 900;
+      }
+
+      .browser-name {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-weight: 800;
+      }
+
+      .browser-detail {
+        display: block;
+        color: var(--muted);
+        font-size: 12px;
+        margin-top: 3px;
+      }
+
+      .browser-empty {
+        display: grid;
+        min-height: 220px;
+        place-items: center;
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .toolbar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto auto;
+        gap: 10px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        padding: 16px;
+      }
+
+      .format-bar {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        background: #fbfdfb;
+        padding: 10px 16px;
+      }
+
+      .format-panel {
+        display: none;
+        flex-wrap: wrap;
+        gap: 8px;
+        align-items: center;
+        border-bottom: 1px solid var(--line);
+        background: #ffffff;
+        padding: 10px 16px;
+      }
+
+      .format-panel.open {
+        display: flex;
+      }
+
+      .format-panel-title {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+        margin-right: 4px;
+      }
+
+      .format-button,
+      .palette-button,
+      .font-size-select {
+        display: inline-grid;
+        place-items: center;
+        min-width: 38px;
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        color: var(--text);
+        font-weight: 800;
+      }
+
+      .format-button:hover,
+      .palette-button:hover,
+      .font-size-select:hover {
+        border-color: rgba(47, 125, 87, 0.45);
+        background: var(--panel-strong);
+      }
+
+      .format-button.active,
+      .palette-button.active,
+      .font-size-select.active {
+        border-color: rgba(47, 125, 87, 0.55);
+        background: var(--panel-strong);
+        box-shadow: inset 0 0 0 1px rgba(47, 125, 87, 0.24);
+      }
+
+      .font-size-select {
+        width: 88px;
+        padding: 0 9px;
+        outline: none;
+      }
+
+      .font-size-select:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(47, 125, 87, 0.12);
+      }
+
+      .format-button.underline {
+        text-decoration: underline;
+      }
+
+      .format-button.strike {
+        text-decoration: line-through;
+      }
+
+      .palette-label {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .format-status {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 700;
+        min-height: 16px;
+      }
+
+      .palette-button {
+        min-width: 30px;
+        width: 30px;
+        padding: 0;
+      }
+
+      .swatch {
+        width: 17px;
+        height: 17px;
+        border: 1px solid rgba(29, 39, 32, 0.18);
+        border-radius: 4px;
+        background: var(--swatch-color);
+      }
+
+      .image-input {
+        display: none;
+      }
+
+      .note-title {
+        width: 100%;
+        min-width: 0;
+        border: 1px solid transparent;
+        border-radius: 8px;
+        padding: 9px 10px;
+        color: var(--text);
+        font-size: 22px;
+        font-weight: 800;
+        outline: none;
+      }
+
+      .meta {
+        color: var(--muted);
+        font-size: 13px;
+        white-space: nowrap;
+      }
+
+      .delete-button {
+        justify-self: start;
+        width: fit-content;
+        min-width: 52px;
+        border-radius: 8px;
+        background: #f7e9e9;
+        color: var(--danger);
+        padding: 10px 12px;
+        font-weight: 700;
+        white-space: nowrap;
+      }
+
+      .delete-button:hover {
+        background: #f1d8d8;
+      }
+
+      .delete-button:disabled {
+        cursor: not-allowed;
+        opacity: 0.45;
+      }
+
+      .delete-button:disabled:hover {
+        background: #f7e9e9;
+      }
+
+      .copy-button {
+        justify-self: end;
+        width: fit-content;
+        border-radius: 8px;
+        background: var(--panel-strong);
+        color: var(--accent-dark);
+        padding: 10px 12px;
+        font-weight: 800;
+      }
+
+      .copy-button:hover {
+        background: #dfeee5;
+      }
+
+      .control-button {
+        justify-self: end;
+        width: fit-content;
+        border-radius: 8px;
+        background: var(--panel-strong);
+        color: var(--accent-dark);
+        padding: 10px 12px;
+        font-weight: 800;
+      }
+
+      .control-button:hover,
+      .control-button.active {
+        background: #dfeee5;
+      }
+
+      .copy-button.is-copied {
+        background: var(--accent);
+        color: #ffffff;
+      }
+
+      .readonly-badge {
+        border-radius: 8px;
+        background: #eef3ff;
+        color: #365e9d;
+        padding: 9px 10px;
+        font-size: 12px;
+        font-weight: 800;
+        white-space: nowrap;
+      }
+
+      .locked-panel {
+        display: grid;
+        flex: 1;
+        place-items: center;
+        padding: 32px;
+        text-align: center;
+      }
+
+      .locked-panel strong {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 22px;
+      }
+
+      .locked-panel p {
+        margin: 0 0 18px;
+        color: var(--muted);
+      }
+
+      .modal-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 20;
+        display: grid;
+        place-items: center;
+        background: rgba(29, 39, 32, 0.34);
+        padding: 18px;
+      }
+
+      .modal {
+        width: min(420px, 100%);
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        box-shadow: var(--shadow);
+        padding: 20px;
+      }
+
+      .modal h2 {
+        margin: 0 0 10px;
+        font-size: 20px;
+      }
+
+      .modal p {
+        margin: 0;
+        color: var(--muted);
+        line-height: 1.5;
+      }
+
+      .modal input {
+        width: 100%;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdfb;
+        color: var(--text);
+        margin-top: 14px;
+        padding: 11px 12px;
+        outline: none;
+      }
+
+      .modal input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 0 3px rgba(47, 125, 87, 0.12);
+      }
+
+      .modal-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+        margin-top: 20px;
+      }
+
+      .modal-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+        gap: 8px;
+        margin-top: 16px;
+      }
+
+      .modal-option {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        color: var(--text);
+        padding: 10px;
+        font-weight: 800;
+      }
+
+      .modal-option:hover {
+        border-color: rgba(47, 125, 87, 0.45);
+        background: var(--panel-strong);
+      }
+
+      .editor {
+        flex: 1;
+        width: 100%;
+        min-height: 420px;
+        border: 0;
+        padding: 22px;
+        color: var(--text);
+        font-size: 17px;
+        line-height: 1.7;
+        outline: none;
+        overflow: auto;
+        white-space: pre-wrap;
+      }
+
+      .editor.readonly {
+        background: #fbfdfb;
+        cursor: default;
+      }
+
+      .editor ul,
+      .editor ol {
+        margin: 8px 0;
+        padding-left: 28px;
+      }
+
+      .editor ul {
+        list-style-type: disc;
+      }
+
+      .editor ul ul {
+        list-style-type: circle;
+      }
+
+      .editor ul ul ul {
+        list-style-type: square;
+      }
+
+      .editor ol {
+        list-style-type: decimal;
+      }
+
+      .editor ol ol {
+        list-style-type: lower-alpha;
+      }
+
+      .editor ol ol ol {
+        list-style-type: lower-roman;
+      }
+
+      .editor li {
+        margin: 4px 0;
+      }
+
+      .editor table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 12px 0;
+      }
+
+      .editor td,
+      .editor th {
+        min-width: 90px;
+        border: 1px solid #bac8be;
+        padding: 8px;
+        vertical-align: top;
+      }
+
+      .editor th {
+        background: var(--panel-strong);
+        font-weight: 800;
+      }
+
+      .editor a {
+        color: #2f64b7;
+        text-decoration: underline;
+      }
+
+      .editor img {
+        display: block;
+        max-width: 100%;
+        height: auto;
+        margin: 12px 0;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+      }
+
+      .editor:empty::before {
+        color: #9aa69d;
+        content: attr(data-placeholder);
+        pointer-events: none;
+      }
+
+      .empty {
+        display: grid;
+        min-height: calc(100vh - 56px);
+        place-items: center;
+        border: 1px dashed var(--line);
+        border-radius: 8px;
+        background: rgba(255, 255, 255, 0.55);
+        color: var(--muted);
+        text-align: center;
+      }
+
+      .empty strong {
+        display: block;
+        margin-bottom: 6px;
+        color: var(--text);
+        font-size: 20px;
+      }
+
+      @media (max-width: 760px) {
+        .app {
+          grid-template-columns: 1fr;
+        }
+
+        .sidebar {
+          min-height: auto;
+          border-right: 0;
+          border-bottom: 1px solid var(--line);
+          padding: 18px;
+        }
+
+        .subject-list {
+          display: none;
+        }
+
+        .main {
+          padding: 16px;
+        }
+
+        .workspace,
+        .empty {
+          min-height: 560px;
+        }
+
+        .toolbar {
+          grid-template-columns: 1fr;
+        }
+
+        .format-bar {
+          padding: 10px;
+        }
+
+        .meta,
+        .delete-button,
+        .copy-button,
+        .control-button {
+          justify-self: start;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <aside class="sidebar">
+        <div class="brand">
+          <h1>자격증 학습 공간</h1>
+          <p>왼쪽에서 과목을 고르고 오른쪽에 공부 내용을 적어두세요.</p>
+        </div>
+
+        <button class="sidebar-tools-toggle" id="toolsToggle" type="button" aria-expanded="false">
+          <span class="toggle-icon" id="toolsToggleIcon">+</span>
+          <span class="toggle-text" id="toolsToggleText">검색/추가 열기</span>
+        </button>
+
+        <div class="sidebar-tools is-hidden" id="toolsPanel">
+          <form class="folder-form" id="folderForm">
+            <input id="folderInput" type="text" placeholder="새 폴더 이름" autocomplete="off" />
+            <button class="add-button" type="submit" aria-label="폴더 추가">+</button>
+          </form>
+
+          <form class="subject-form" id="subjectForm">
+            <input id="subjectInput" type="text" placeholder="새 과목 이름" autocomplete="off" />
+            <button class="add-button" type="submit" aria-label="과목 추가">+</button>
+          </form>
+
+          <input class="search" id="searchInput" type="search" placeholder="과목 검색" />
+        </div>
+
+        <section class="folder-panel" aria-label="폴더">
+          <div class="sidebar-label">폴더</div>
+          <div class="folder-list" id="folderList"></div>
+        </section>
+
+        <div class="subject-list" id="subjectList"></div>
+      </aside>
+
+      <main class="main" id="main"></main>
+    </div>
+
+    <script>
+      const STORAGE_KEY = "certificate-study-space-v1";
+      const DEFAULT_FOLDER_ID = "default-folder";
+      const LEGACY_GENERAL_FOLDER_ID = "general-study-folder";
+      const ALL_FOLDERS_ID = "all-folders";
+      const DEFAULT_FOLDER_SUBJECT_TYPES = [
+        "core-note",
+        "wrong-note",
+        "shortcuts",
+        "policy",
+        "template",
+      ];
+      const DEFAULT_TEXT_COLOR = "#1d2720";
+      const DEFAULT_BACKGROUND_COLOR = "#ffffff";
+      const SHORTCUTS_NOTE =
+        "Cmd/Ctrl + B: 굵게\n" +
+        "Cmd/Ctrl + I: 기울임\n" +
+        "Cmd/Ctrl + U: 밑줄\n" +
+        "Cmd/Ctrl + K: 링크 삽입\n" +
+        "Cmd/Ctrl + Shift + 7: 번호형 목록\n" +
+        "Cmd/Ctrl + Shift + 8: 단추형 목록\n" +
+        "Alt/Option + Shift + 5: 취소선\n" +
+        "Cmd/Ctrl + \\\\: 서식 지우기\n" +
+        "Tab / Shift + Tab: 목록 들여쓰기 / 내어쓰기\n" +
+        "Cmd/Ctrl + Alt/Option + ↓: 표 행 추가\n" +
+        "Cmd/Ctrl + Alt/Option + ↑: 표 행 삭제\n" +
+        "Cmd/Ctrl + Alt/Option + →: 표 열 추가\n" +
+        "Cmd/Ctrl + Alt/Option + ←: 표 열 삭제\n" +
+        "Cmd/Ctrl + Alt/Option + Delete/Backspace: 표 제거\n" +
+        "Alt/Option + Shift + R: 표 행 추가\n" +
+        "Alt/Option + Shift + E: 표 행 삭제\n" +
+        "Alt/Option + Shift + C: 표 열 추가\n" +
+        "Alt/Option + Shift + X: 표 열 삭제\n" +
+        "Alt/Option + Shift + T: 표 제거";
+      const FONT_SIZE_LABELS = {
+        1: "아주 작게",
+        2: "작게",
+        3: "보통",
+        4: "크게",
+        5: "아주 크게",
+        6: "제목",
+        7: "큰 제목",
+      };
+
+      const defaultSubjects = [
+        {
+          id: crypto.randomUUID(),
+          folderId: DEFAULT_FOLDER_ID,
+          systemType: "core-note",
+          title: "필기 핵심 정리",
+          note: "오늘 공부한 핵심 개념을 적어보세요.\n\n- \n- \n- ",
+          updatedAt: Date.now(),
+        },
+        {
+          id: crypto.randomUUID(),
+          folderId: DEFAULT_FOLDER_ID,
+          systemType: "wrong-note",
+          title: "오답 노트",
+          note: "틀린 문제와 다시 봐야 할 이유를 적어보세요.\n\n문제:\n이유:\n다음 복습:",
+          updatedAt: Date.now(),
+        },
+        {
+          id: crypto.randomUUID(),
+          folderId: DEFAULT_FOLDER_ID,
+          systemType: "shortcuts",
+          title: "단축키",
+          note: SHORTCUTS_NOTE,
+          updatedAt: Date.now(),
+        },
+      ];
+
+      const defaultFolders = [{ id: DEFAULT_FOLDER_ID, title: "기본", parentId: null }];
+
+      let state = loadState();
+      let activeId = state.activeId || null;
+      let activeFolderId = state.activeFolderId || DEFAULT_FOLDER_ID;
+      let toolsOpen = false;
+      let draggedFolderId = null;
+      let draggedSubjectId = null;
+
+      const toolsToggle = document.querySelector("#toolsToggle");
+      const toolsToggleIcon = document.querySelector("#toolsToggleIcon");
+      const toolsToggleText = document.querySelector("#toolsToggleText");
+      const toolsPanel = document.querySelector("#toolsPanel");
+      const folderForm = document.querySelector("#folderForm");
+      const folderInput = document.querySelector("#folderInput");
+      const folderList = document.querySelector("#folderList");
+      const subjectForm = document.querySelector("#subjectForm");
+      const subjectInput = document.querySelector("#subjectInput");
+      const searchInput = document.querySelector("#searchInput");
+      const subjectList = document.querySelector("#subjectList");
+      const main = document.querySelector("#main");
+
+      function loadState() {
+        const saved = localStorage.getItem(STORAGE_KEY);
+
+        if (!saved) {
+          return {
+            folders: defaultFolders,
+            subjects: defaultSubjects,
+            activeFolderId: DEFAULT_FOLDER_ID,
+            activeId: defaultSubjects[0].id,
+          };
+        }
+
+        try {
+          const parsed = JSON.parse(saved);
+          if (Array.isArray(parsed.subjects)) {
+            return migrateState(parsed);
+          }
+        } catch {
+          localStorage.removeItem(STORAGE_KEY);
+        }
+
+        return {
+          folders: defaultFolders,
+          subjects: defaultSubjects,
+          activeFolderId: DEFAULT_FOLDER_ID,
+          activeId: defaultSubjects[0].id,
+        };
+      }
+
+      function saveState() {
+        state.activeId = activeId;
+        state.activeFolderId = activeFolderId;
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      }
+
+      function migrateState(savedState) {
+        let folders =
+          Array.isArray(savedState.folders) && savedState.folders.length
+            ? savedState.folders
+            : defaultFolders;
+        const legacyGeneralHasContent = savedState.subjects.some(
+          (subject) => subject.folderId === LEGACY_GENERAL_FOLDER_ID,
+        );
+        folders = folders.filter(
+          (folder) => folder.id !== LEGACY_GENERAL_FOLDER_ID || legacyGeneralHasContent,
+        );
+        const hasDefaultFolder = folders.some((folder) => folder.id === DEFAULT_FOLDER_ID);
+
+        if (!hasDefaultFolder) {
+          folders = [...defaultFolders, ...folders];
+        }
+
+        const folderIds = new Set(folders.map((folder) => folder.id));
+
+        const normalizedFolders = folders.map((folder) => ({
+          ...folder,
+          parentId:
+            folder.parentId === DEFAULT_FOLDER_ID || !folderIds.has(folder.parentId)
+              ? null
+              : folder.parentId,
+        }));
+        const mergedSubjects = ensureDefaultSubjects(savedState.subjects);
+        const subjects = mergedSubjects.map((subject) => {
+          const systemType = getDefaultSubjectType(subject);
+
+          return {
+            ...subject,
+            systemType,
+            note: systemType === "shortcuts" ? SHORTCUTS_NOTE : subject.note,
+            noteHtml: systemType === "shortcuts" ? plainTextToHtml(SHORTCUTS_NOTE) : subject.noteHtml,
+            isReadonly: Boolean(subject.isReadonly),
+            isLocked: Boolean(subject.isLocked),
+            folderId: getSafeFolderId(subject, folderIds, normalizedFolders),
+          };
+        });
+
+        const restoredActiveId = subjects.some((subject) => subject.id === savedState.activeId)
+          ? savedState.activeId
+          : null;
+        const restoredActiveFolderId = restoredActiveId
+          ? subjects.find((subject) => subject.id === restoredActiveId).folderId
+          : folderIds.has(savedState.activeFolderId)
+            ? savedState.activeFolderId
+            : DEFAULT_FOLDER_ID;
+
+        return {
+          ...savedState,
+          folders: normalizedFolders,
+          subjects,
+          activeId: restoredActiveId,
+          activeFolderId: restoredActiveFolderId,
+        };
+      }
+
+      function ensureDefaultSubjects(subjects) {
+        const existingTypes = new Set(subjects.map((subject) => getDefaultSubjectType(subject)));
+        const missingDefaults = defaultSubjects.filter(
+          (subject) => !existingTypes.has(subject.systemType),
+        );
+
+        return [...subjects, ...missingDefaults];
+      }
+
+      function canStayInDefaultFolder(subject) {
+        return DEFAULT_FOLDER_SUBJECT_TYPES.includes(getDefaultSubjectType(subject));
+      }
+
+      function isProtectedDefaultSubject(subject) {
+        return subject?.folderId === DEFAULT_FOLDER_ID && canStayInDefaultFolder(subject);
+      }
+
+      function isFileReadonly(subject) {
+        return isProtectedDefaultSubject(subject) || Boolean(subject?.isReadonly);
+      }
+
+      function getDefaultSubjectType(subject) {
+        if (DEFAULT_FOLDER_SUBJECT_TYPES.includes(subject.systemType)) {
+          return subject.systemType;
+        }
+
+        if (subject.title === "필기 핵심 정리") {
+          return "core-note";
+        }
+
+        if (subject.title === "오답 노트") {
+          return "wrong-note";
+        }
+
+        if (subject.title === "단축키") {
+          return "shortcuts";
+        }
+
+        return subject.systemType || null;
+      }
+
+      function getSafeFolderId(subject, folderIds, folders) {
+        const fallbackFolderId =
+          folders.find((folder) => folder.id !== DEFAULT_FOLDER_ID)?.id || DEFAULT_FOLDER_ID;
+        const folderId = folderIds.has(subject.folderId) ? subject.folderId : fallbackFolderId;
+
+        if (folderId === DEFAULT_FOLDER_ID && !canStayInDefaultFolder(subject)) {
+          return fallbackFolderId;
+        }
+
+        return folderId;
+      }
+
+      function getActiveSubject() {
+        if (activeFolderId === ALL_FOLDERS_ID) {
+          return null;
+        }
+
+        return state.subjects.find((subject) => subject.id === activeId);
+      }
+
+      function getDescendantFolderIds(folderId) {
+        const descendants = [];
+        const stack = state.folders
+          .filter((folder) => folder.parentId === folderId)
+          .map((folder) => folder.id);
+
+        while (stack.length) {
+          const childId = stack.pop();
+          descendants.push(childId);
+          state.folders
+            .filter((folder) => folder.parentId === childId)
+            .forEach((folder) => stack.push(folder.id));
+        }
+
+        return descendants;
+      }
+
+      function getFolderAndDescendantIds(folderId) {
+        return [folderId, ...getDescendantFolderIds(folderId)];
+      }
+
+      function getFolderSubjectCount(folderId) {
+        const folderIds = new Set(getFolderAndDescendantIds(folderId));
+        return state.subjects.filter((subject) => folderIds.has(subject.folderId)).length;
+      }
+
+      function getFolderTreeRows(parentId = null, depth = 0) {
+        return state.folders
+          .filter((folder) => folder.parentId === parentId)
+          .flatMap((folder) => [
+            { folder, depth },
+            ...getFolderTreeRows(folder.id, depth + 1),
+          ]);
+      }
+
+      function getVisibleSubjects() {
+        if (activeFolderId === ALL_FOLDERS_ID) {
+          return [];
+        }
+
+        const keyword = searchInput.value.trim().toLowerCase();
+        const activeFolderIds = new Set(getFolderAndDescendantIds(activeFolderId));
+
+        return state.subjects.filter((subject) => {
+          const matchesFolder = activeFolderIds.has(subject.folderId);
+          const matchesKeyword = subject.title.toLowerCase().includes(keyword);
+          return matchesFolder && matchesKeyword;
+        });
+      }
+
+      function renderFolders() {
+        const folders = [
+          { folder: { id: ALL_FOLDERS_ID, title: "전체", parentId: null }, depth: 0 },
+          ...getFolderTreeRows(null, 1),
+        ];
+        folderList.innerHTML = "";
+
+        folders.forEach(({ folder, depth }) => {
+          const subjectCount =
+            folder.id === ALL_FOLDERS_ID
+              ? state.subjects.length
+              : getFolderSubjectCount(folder.id);
+          const row = document.createElement("div");
+          row.className = `folder-item${folder.id === activeFolderId ? " active" : ""}`;
+          row.dataset.folderId = folder.id;
+          row.style.paddingLeft = `${8 + depth * 18}px`;
+          row.draggable = folder.id !== ALL_FOLDERS_ID && folder.id !== DEFAULT_FOLDER_ID;
+          row.innerHTML = `
+            <button class="folder-name" type="button"></button>
+            <span class="folder-count">${subjectCount}</span>
+            ${
+              folder.id === ALL_FOLDERS_ID || folder.id === DEFAULT_FOLDER_ID
+                ? "<span></span>"
+                : '<button class="folder-delete" type="button" aria-label="폴더 삭제">×</button>'
+            }
+          `;
+
+          const folderButton = row.querySelector(".folder-name");
+          folderButton.textContent = folder.title;
+          folderButton.addEventListener("click", () => {
+            activeFolderId = folder.id;
+            activeId = null;
+            saveState();
+            render();
+          });
+
+          if (folder.id !== ALL_FOLDERS_ID && folder.id !== DEFAULT_FOLDER_ID) {
+            row.addEventListener("dragstart", (event) => {
+              draggedFolderId = folder.id;
+              event.dataTransfer.setData("application/x-study-folder", folder.id);
+              event.dataTransfer.effectAllowed = "move";
+              row.classList.add("dragging");
+            });
+
+            row.addEventListener("dragend", () => {
+              draggedFolderId = null;
+              row.classList.remove("dragging");
+              document
+                .querySelectorAll(".folder-item.drop-target")
+                .forEach((item) => item.classList.remove("drop-target"));
+            });
+          }
+
+          row.addEventListener("dragover", (event) => {
+            const targetFolderId = folder.id === ALL_FOLDERS_ID ? null : folder.id;
+
+            if (draggedFolderId) {
+              if (!canMoveFolderToFolder(draggedFolderId, targetFolderId)) {
+                return;
+              }
+              event.preventDefault();
+              row.classList.add("drop-target");
+              return;
+            }
+
+            if (draggedSubjectId && canMoveSubjectToFolder(draggedSubjectId, folder.id)) {
+              event.preventDefault();
+              row.classList.add("drop-target");
+            }
+          });
+
+          row.addEventListener("dragleave", () => {
+            row.classList.remove("drop-target");
+          });
+
+          row.addEventListener("drop", (event) => {
+            event.preventDefault();
+            row.classList.remove("drop-target");
+            const targetFolderId = folder.id === ALL_FOLDERS_ID ? null : folder.id;
+
+            if (draggedFolderId) {
+              moveFolderToFolder(draggedFolderId, targetFolderId);
+              return;
+            }
+
+            if (draggedSubjectId && canMoveSubjectToFolder(draggedSubjectId, folder.id)) {
+              moveSubjectToFolder(draggedSubjectId, folder.id);
+            }
+          });
+
+          const deleteButton = row.querySelector(".folder-delete");
+          if (deleteButton) {
+            deleteButton.addEventListener("click", () => showFolderDeleteConfirm(folder));
+          }
+
+          folderList.append(row);
+
+          if (folder.id !== ALL_FOLDERS_ID && folder.id === activeFolderId) {
+            const keyword = searchInput.value.trim().toLowerCase();
+            const folderSubjects = state.subjects.filter(
+              (subject) =>
+                subject.folderId === folder.id &&
+                subject.title.toLowerCase().includes(keyword),
+            );
+
+            folderSubjects.forEach((subject) => {
+              folderList.append(createSubjectTreeItem(subject, depth + 1));
+            });
+          }
+        });
+      }
+
+      function createSubjectTreeItem(subject, depth) {
+        const button = document.createElement("button");
+        button.className = `subject-item tree-subject-item${subject.id === activeId ? " active" : ""}`;
+        button.type = "button";
+        button.draggable = !isProtectedDefaultSubject(subject);
+        button.dataset.subjectId = subject.id;
+        button.style.paddingLeft = `${8 + depth * 18}px`;
+        button.innerHTML = `
+          <span class="subject-name"></span>
+          <span class="note-count">${getNoteText(subject).length}자</span>
+        `;
+
+        button.querySelector(".subject-name").textContent = subject.title;
+        button.addEventListener("click", () => {
+          activeId = subject.id;
+          saveState();
+          render();
+        });
+
+        button.addEventListener("dragstart", (event) => {
+          if (isProtectedDefaultSubject(subject)) {
+            event.preventDefault();
+            return;
+          }
+
+          draggedSubjectId = subject.id;
+          event.dataTransfer.setData("application/x-study-subject", subject.id);
+          event.dataTransfer.effectAllowed = "move";
+          button.classList.add("dragging");
+        });
+
+        button.addEventListener("dragend", () => {
+          draggedSubjectId = null;
+          button.classList.remove("dragging");
+          document
+            .querySelectorAll(".folder-item.drop-target")
+            .forEach((item) => item.classList.remove("drop-target"));
+        });
+
+        return button;
+      }
+
+      function formatUpdatedAt(timestamp) {
+        return new Intl.DateTimeFormat("ko-KR", {
+          month: "short",
+          day: "numeric",
+          hour: "2-digit",
+          minute: "2-digit",
+        }).format(timestamp);
+      }
+
+      function renderSubjects() {
+        subjectList.innerHTML = "";
+      }
+
+      function canMoveFolderToFolder(folderId, targetFolderId) {
+        if (!folderId || folderId === DEFAULT_FOLDER_ID || folderId === targetFolderId) {
+          return false;
+        }
+
+        return !getDescendantFolderIds(folderId).includes(targetFolderId);
+      }
+
+      function moveFolderToFolder(folderId, targetFolderId) {
+        if (!canMoveFolderToFolder(folderId, targetFolderId)) {
+          return;
+        }
+
+        const folder = state.folders.find((item) => item.id === folderId);
+        if (!folder || folder.parentId === targetFolderId) {
+          return;
+        }
+
+        folder.parentId = targetFolderId;
+        activeFolderId = folder.id;
+        activeId = null;
+        saveState();
+        render();
+      }
+
+      function moveSubjectToFolder(subjectId, folderId) {
+        const subject = state.subjects.find((item) => item.id === subjectId);
+
+        if (!subject || subject.folderId === folderId || !canMoveSubjectToFolder(subjectId, folderId)) {
+          return;
+        }
+
+        subject.folderId = folderId;
+        activeFolderId = folderId;
+        activeId = subject.id;
+        subject.updatedAt = Date.now();
+        saveState();
+        render();
+      }
+
+      function canMoveSubjectToFolder(subjectId, folderId) {
+        const subject = state.subjects.find((item) => item.id === subjectId);
+
+        if (!subject || folderId === ALL_FOLDERS_ID) {
+          return false;
+        }
+
+        if (isProtectedDefaultSubject(subject)) {
+          return false;
+        }
+
+        return folderId !== DEFAULT_FOLDER_ID || canStayInDefaultFolder(subject);
+      }
+
+      function renderEditor() {
+        const subject = getActiveSubject();
+        const isReadonlyTemplate = isProtectedDefaultSubject(subject);
+        const isReadonlyFile = isFileReadonly(subject);
+        const isLockedFile = !isReadonlyTemplate && Boolean(subject?.isLocked);
+
+        if (!subject) {
+          renderFolderBrowser();
+          return;
+        }
+
+        if (isLockedFile) {
+          main.innerHTML = `
+            <section class="workspace">
+              <div class="toolbar">
+                <input class="note-title" id="noteTitle" type="text" aria-label="과목 이름" readonly />
+                <div class="meta">잠김</div>
+                <button class="control-button active" id="lockToggle" type="button">잠금 해제</button>
+              </div>
+              <div class="locked-panel">
+                <div>
+                  <strong>잠긴 파일입니다</strong>
+                  <p>잠금을 해제하면 메모 내용을 다시 볼 수 있습니다.</p>
+                  <button class="control-button active" id="unlockButton" type="button">잠금 해제</button>
+                </div>
+              </div>
+            </section>
+          `;
+
+          document.querySelector("#noteTitle").value = subject.title;
+          document.querySelector("#lockToggle").addEventListener("click", () =>
+            toggleSubjectLock(subject),
+          );
+          document.querySelector("#unlockButton").addEventListener("click", () =>
+            toggleSubjectLock(subject),
+          );
+          return;
+        }
+
+        main.innerHTML = `
+          <section class="workspace">
+            <div class="toolbar">
+              <input class="note-title" id="noteTitle" type="text" aria-label="과목 이름" />
+              <div class="meta">저장됨: ${formatUpdatedAt(subject.updatedAt)}</div>
+              ${
+                isReadonlyTemplate
+                  ? '<span class="readonly-badge">읽기 전용 양식</span><button class="copy-button" id="copyButton" type="button">양식 복사</button>'
+                  : `<button class="control-button${subject.isReadonly ? " active" : ""}" id="readonlyToggle" type="button">${subject.isReadonly ? "읽기 전용 해제" : "읽기 전용"}</button>
+                    <button class="control-button" id="lockToggle" type="button">잠금</button>
+                    <button class="delete-button" id="deleteButton" type="button"${subject.isReadonly ? " disabled" : ""}>삭제</button>`
+              }
+            </div>
+            <div class="format-bar${isReadonlyFile ? " is-hidden" : ""}" aria-label="서식 도구">
+              <select class="font-size-select" id="fontSize" aria-label="글꼴 크기" title="글꼴 크기">
+                <option value="">크기</option>
+                <option value="2">작게</option>
+                <option value="3">보통</option>
+                <option value="4">크게</option>
+                <option value="5">아주 크게</option>
+              </select>
+              <button class="format-button" type="button" data-command="bold" title="굵게: Cmd/Ctrl+B">B</button>
+              <button class="format-button" type="button" data-command="italic" title="기울임: Cmd/Ctrl+I">I</button>
+              <button class="format-button underline" type="button" data-command="underline" title="밑줄: Cmd/Ctrl+U">U</button>
+              <button class="format-button strike" type="button" data-command="strikeThrough" title="취소선: Alt/Option+Shift+5">S</button>
+              <button class="format-button" type="button" id="listMenuButton" title="목록 메뉴">목록</button>
+              <button class="format-button" type="button" id="colorMenuButton" title="색상 메뉴">색상</button>
+              <button class="format-button" type="button" id="tableMenuButton" title="표 메뉴">표</button>
+              <button class="format-button" type="button" data-insert="link" title="링크 삽입: Cmd/Ctrl+K">링크</button>
+              <button class="format-button" type="button" data-insert="image" title="이미지 삽입">이미지</button>
+              <button class="format-button" type="button" id="plainPasteButton" title="텍스트만 붙여넣기">텍스트 붙여넣기</button>
+              <button class="format-button" type="button" data-command="removeFormat" title="서식 지우기">지움</button>
+              <span class="format-status" id="formatStatus">선택값 없음</span>
+              <input class="image-input" id="imageInput" type="file" accept="image/*" />
+            </div>
+            <div class="format-panel" id="formatPanel" aria-live="polite"></div>
+            <div class="editor${isReadonlyFile ? " readonly" : ""}" id="noteEditor" contenteditable="${isReadonlyFile ? "false" : "true"}" spellcheck="false" data-placeholder="이 과목의 공부 내용을 적어보세요."></div>
+          </section>
+        `;
+
+        const noteTitle = document.querySelector("#noteTitle");
+        const noteEditor = document.querySelector("#noteEditor");
+        const deleteButton = document.querySelector("#deleteButton");
+        const copyButton = document.querySelector("#copyButton");
+        const readonlyToggle = document.querySelector("#readonlyToggle");
+        const lockToggle = document.querySelector("#lockToggle");
+        const formatButtons = document.querySelectorAll("[data-command]");
+        const insertButtons = document.querySelectorAll("[data-insert]");
+        const paletteButtons = [];
+        const listMenuButton = document.querySelector("#listMenuButton");
+        const colorMenuButton = document.querySelector("#colorMenuButton");
+        const tableMenuButton = document.querySelector("#tableMenuButton");
+        const plainPasteButton = document.querySelector("#plainPasteButton");
+        const fontSize = document.querySelector("#fontSize");
+        const formatStatus = document.querySelector("#formatStatus");
+        const formatPanel = document.querySelector("#formatPanel");
+        const imageInput = document.querySelector("#imageInput");
+
+        noteTitle.value = subject.title;
+        noteTitle.readOnly = isReadonlyFile;
+        noteEditor.innerHTML = subject.noteHtml || plainTextToHtml(subject.note || "");
+
+        if (isReadonlyTemplate) {
+          copyButton.addEventListener("click", () => copyTemplateToClipboard(subject, copyButton));
+          return;
+        }
+
+        readonlyToggle.addEventListener("click", () => toggleSubjectReadonly(subject));
+        lockToggle.addEventListener("click", () => toggleSubjectLock(subject));
+        if (!subject.isReadonly) {
+          deleteButton.addEventListener("click", showDeleteConfirm);
+        }
+
+        if (isReadonlyFile) {
+          return;
+        }
+
+        noteTitle.addEventListener("input", () => {
+          subject.title = noteTitle.value || "이름 없는 과목";
+          subject.updatedAt = Date.now();
+          saveState();
+          renderFolders();
+        });
+
+        noteEditor.addEventListener("input", () => {
+          updateNote(subject, noteEditor);
+          updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus);
+        });
+        noteEditor.addEventListener("paste", () => {
+          window.setTimeout(() => updateNote(subject, noteEditor), 0);
+        });
+        noteEditor.addEventListener("keydown", (event) =>
+          handleEditorKeydown(
+            event,
+            subject,
+            noteEditor,
+            formatButtons,
+            paletteButtons,
+            fontSize,
+            formatStatus,
+          ),
+        );
+        noteEditor.addEventListener("keyup", () =>
+          updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus),
+        );
+        noteEditor.addEventListener("mouseup", () =>
+          updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus),
+        );
+        document.onselectionchange = () => {
+          const selection = window.getSelection();
+          const selectedNode = selection.anchorNode;
+          const selectedElement =
+            selectedNode?.nodeType === Node.TEXT_NODE ? selectedNode.parentElement : selectedNode;
+
+          if (selectedElement && noteEditor.contains(selectedElement)) {
+            updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus);
+          }
+        };
+
+        formatButtons.forEach((button) => {
+          button.addEventListener("mousedown", (event) => event.preventDefault());
+          button.addEventListener("click", () => {
+            noteEditor.focus();
+            document.execCommand(button.dataset.command, false, button.dataset.value || null);
+            updateNote(subject, noteEditor);
+            updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus);
+          });
+        });
+
+        insertButtons.forEach((button) => {
+          button.addEventListener("mousedown", (event) => event.preventDefault());
+          button.addEventListener("click", () => {
+            noteEditor.focus();
+
+            if (button.dataset.insert === "table") {
+              insertTable(subject, noteEditor);
+            }
+
+            if (button.dataset.insert === "link") {
+              insertLink(subject, noteEditor);
+            }
+
+            if (button.dataset.insert === "image") {
+              imageInput.click();
+            }
+          });
+        });
+
+        listMenuButton.addEventListener("click", () =>
+          showListPanel(subject, noteEditor, formatButtons, paletteButtons, fontSize, formatStatus, formatPanel),
+        );
+        colorMenuButton.addEventListener("click", () =>
+          showColorPanel(subject, noteEditor, formatButtons, paletteButtons, fontSize, formatStatus, formatPanel),
+        );
+        tableMenuButton.addEventListener("click", () => showTablePanel(subject, noteEditor, formatPanel));
+        plainPasteButton.addEventListener("click", () => pastePlainTextFromClipboard(subject, noteEditor));
+
+        imageInput.addEventListener("change", () => {
+          const file = imageInput.files[0];
+
+          if (!file) {
+            return;
+          }
+
+          insertImageFile(file, subject, noteEditor);
+          imageInput.value = "";
+        });
+
+        fontSize.addEventListener("change", () => {
+          if (!fontSize.value) {
+            return;
+          }
+
+          noteEditor.focus();
+          document.execCommand("fontSize", false, fontSize.value);
+          updateNote(subject, noteEditor);
+          updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus);
+        });
+
+      }
+
+      function toggleSubjectReadonly(subject) {
+        subject.isReadonly = !subject.isReadonly;
+        subject.updatedAt = Date.now();
+        saveState();
+        render();
+      }
+
+      function toggleSubjectLock(subject) {
+        subject.isLocked = !subject.isLocked;
+        subject.updatedAt = Date.now();
+        saveState();
+        render();
+      }
+
+      function deleteActiveSubject() {
+        const visibleBeforeDelete = getVisibleSubjects();
+        const subjectIndex = visibleBeforeDelete.findIndex((item) => item.id === activeId);
+        state.subjects = state.subjects.filter((item) => item.id !== activeId);
+        const visibleSubjects = getVisibleSubjects();
+        activeId =
+          visibleSubjects[subjectIndex]?.id || visibleSubjects[subjectIndex - 1]?.id || null;
+        saveState();
+        render();
+      }
+
+      function deleteFolder(folder) {
+        state.subjects = state.subjects.filter((subject) => subject.folderId !== folder.id);
+        state.folders = state.folders.map((item) =>
+          item.parentId === folder.id ? { ...item, parentId: null } : item,
+        );
+        state.folders = state.folders.filter((item) => item.id !== folder.id);
+        activeFolderId = ALL_FOLDERS_ID;
+        activeId = null;
+        saveState();
+        render();
+      }
+
+      function showDeleteConfirm() {
+        showConfirmModal({
+          title: "파일 삭제",
+          message: "삭제시 복구가 불가능합니다.정말 삭제하시겠습니까?",
+          confirmLabel: "삭제",
+          danger: true,
+          onConfirm: deleteActiveSubject,
+        });
+      }
+
+      function showFolderDeleteConfirm(folder) {
+        showConfirmModal({
+          title: "폴더 삭제",
+          message: "삭제시 복구가 불가능합니다.정말 삭제하시겠습니까?",
+          confirmLabel: "삭제",
+          danger: true,
+          onConfirm: () => deleteFolder(folder),
+        });
+      }
+
+      function getActiveFolderTitle() {
+        if (activeFolderId === ALL_FOLDERS_ID) {
+          return "전체";
+        }
+
+        return state.folders.find((folder) => folder.id === activeFolderId)?.title || "폴더";
+      }
+
+      function renderFolderBrowser() {
+        const childFolders =
+          activeFolderId === ALL_FOLDERS_ID
+            ? state.folders.filter((folder) => folder.parentId === null)
+            : state.folders.filter((folder) => folder.parentId === activeFolderId);
+        const files =
+          activeFolderId === ALL_FOLDERS_ID
+            ? []
+            : state.subjects.filter((subject) => subject.folderId === activeFolderId);
+        const folderTitle = getActiveFolderTitle();
+        const itemCount = childFolders.length + files.length;
+
+        main.innerHTML = `
+          <section class="browser">
+            <div class="browser-header">
+              <div>
+                <h2 class="browser-title">${escapeHtml(folderTitle)}</h2>
+                <div class="browser-meta">${childFolders.length}개 폴더 · ${files.length}개 파일</div>
+              </div>
+              <div class="browser-actions">
+                ${
+                  activeFolderId === ALL_FOLDERS_ID
+                    ? ""
+                    : '<div class="browser-drop-zone" id="parentDropZone">상위로 빼기</div>'
+                }
+                <button class="control-button" id="quickFolderButton" type="button">${activeFolderId === ALL_FOLDERS_ID ? "새 폴더" : "하위 폴더 추가"}</button>
+                ${
+                  activeFolderId === ALL_FOLDERS_ID || activeFolderId === DEFAULT_FOLDER_ID
+                    ? ""
+                    : '<button class="control-button" id="quickSubjectButton" type="button">새 파일 추가</button>'
+                }
+              </div>
+            </div>
+            ${
+              itemCount
+                ? '<div class="browser-grid" id="browserGrid"></div>'
+                : `<div class="browser-empty"><div><strong>비어 있습니다</strong><br>${
+                    activeFolderId === ALL_FOLDERS_ID
+                      ? "새 폴더를 만들면 이곳에 표시됩니다."
+                      : "하위 폴더나 과목 파일을 추가해보세요."
+                  }</div></div>`
+            }
+          </section>
+        `;
+
+        const browserGrid = document.querySelector("#browserGrid");
+        const quickFolderButton = document.querySelector("#quickFolderButton");
+        const quickSubjectButton = document.querySelector("#quickSubjectButton");
+        const parentDropZone = document.querySelector("#parentDropZone");
+
+        quickFolderButton.addEventListener("click", () =>
+          showCreateFolderModal(activeFolderId === ALL_FOLDERS_ID ? null : activeFolderId),
+        );
+
+        if (quickSubjectButton) {
+          quickSubjectButton.addEventListener("click", () => showCreateSubjectModal(activeFolderId));
+        }
+
+        if (parentDropZone) {
+          attachBrowserDropTarget(parentDropZone, getParentDropTargetId());
+        }
+
+        if (!browserGrid) {
+          return;
+        }
+
+        childFolders.forEach((folder) => {
+          const item = createBrowserItem({
+            icon: "폴더",
+            name: folder.title,
+            detail: `${getFolderSubjectCount(folder.id)}개 파일 포함`,
+          });
+          item.draggable = folder.id !== DEFAULT_FOLDER_ID;
+          item.dataset.folderId = folder.id;
+
+          item.addEventListener("click", () => {
+            activeFolderId = folder.id;
+            activeId = null;
+            saveState();
+            render();
+          });
+          attachFolderDrag(item, folder);
+          attachBrowserDropTarget(item, folder.id);
+
+          browserGrid.append(item);
+        });
+
+        files.forEach((subject) => {
+          const item = createBrowserItem({
+            icon: "파일",
+            name: subject.title,
+            detail: `${getNoteText(subject).length}자`,
+          });
+          item.draggable = !isProtectedDefaultSubject(subject);
+          item.dataset.subjectId = subject.id;
+
+          item.addEventListener("click", () => {
+            activeId = subject.id;
+            saveState();
+            render();
+          });
+          attachSubjectDrag(item, subject);
+
+          browserGrid.append(item);
+        });
+      }
+
+      function getParentDropTargetId() {
+        const activeFolder = state.folders.find((folder) => folder.id === activeFolderId);
+        return activeFolder?.parentId || null;
+      }
+
+      function attachFolderDrag(item, folder) {
+        item.addEventListener("dragstart", (event) => {
+          if (folder.id === DEFAULT_FOLDER_ID) {
+            event.preventDefault();
+            return;
+          }
+
+          draggedFolderId = folder.id;
+          event.dataTransfer.setData("application/x-study-folder", folder.id);
+          event.dataTransfer.effectAllowed = "move";
+          item.classList.add("dragging");
+        });
+
+        item.addEventListener("dragend", () => {
+          draggedFolderId = null;
+          clearBrowserDropTargets();
+          item.classList.remove("dragging");
+        });
+      }
+
+      function attachSubjectDrag(item, subject) {
+        item.addEventListener("dragstart", (event) => {
+          if (isProtectedDefaultSubject(subject)) {
+            event.preventDefault();
+            return;
+          }
+
+          draggedSubjectId = subject.id;
+          event.dataTransfer.setData("application/x-study-subject", subject.id);
+          event.dataTransfer.effectAllowed = "move";
+          item.classList.add("dragging");
+        });
+
+        item.addEventListener("dragend", () => {
+          draggedSubjectId = null;
+          clearBrowserDropTargets();
+          item.classList.remove("dragging");
+        });
+      }
+
+      function attachBrowserDropTarget(target, folderId) {
+        target.addEventListener("dragover", (event) => {
+          if (canDropOnBrowserTarget(folderId)) {
+            event.preventDefault();
+            target.classList.add("drop-target");
+          }
+        });
+
+        target.addEventListener("dragleave", () => {
+          target.classList.remove("drop-target");
+        });
+
+        target.addEventListener("drop", (event) => {
+          event.preventDefault();
+          target.classList.remove("drop-target");
+
+          if (draggedFolderId && canMoveFolderToFolder(draggedFolderId, folderId)) {
+            moveFolderToFolder(draggedFolderId, folderId);
+            return;
+          }
+
+          if (draggedSubjectId && folderId && canMoveSubjectToFolder(draggedSubjectId, folderId)) {
+            moveSubjectToFolder(draggedSubjectId, folderId);
+          }
+        });
+      }
+
+      function canDropOnBrowserTarget(folderId) {
+        if (draggedFolderId) {
+          return canMoveFolderToFolder(draggedFolderId, folderId);
+        }
+
+        if (draggedSubjectId) {
+          return Boolean(folderId) && canMoveSubjectToFolder(draggedSubjectId, folderId);
+        }
+
+        return false;
+      }
+
+      function clearBrowserDropTargets() {
+        document
+          .querySelectorAll(".browser-item.drop-target, .browser-drop-zone.drop-target")
+          .forEach((item) => item.classList.remove("drop-target"));
+      }
+
+      function createBrowserItem({ icon, name, detail }) {
+        const item = document.createElement("button");
+        item.className = "browser-item";
+        item.type = "button";
+        item.innerHTML = `
+          <span class="browser-icon">${icon}</span>
+          <span>
+            <span class="browser-name"></span>
+            <span class="browser-detail">${detail}</span>
+          </span>
+        `;
+        item.querySelector(".browser-name").textContent = name;
+        return item;
+      }
+
+      function escapeHtml(value) {
+        return String(value)
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#039;");
+      }
+
+      function showConfirmModal({
+        title,
+        message,
+        confirmLabel,
+        cancelLabel = "취소",
+        danger = false,
+        inputLabel = "",
+        inputValue = "",
+        onConfirm,
+      }) {
+        const backdrop = document.createElement("div");
+        const inputHtml = inputLabel
+          ? `<input id="modalInput" type="text" aria-label="${escapeHtml(inputLabel)}" placeholder="${escapeHtml(inputLabel)}" value="${escapeHtml(inputValue)}" autocomplete="off" />`
+          : "";
+        backdrop.className = "modal-backdrop";
+        backdrop.innerHTML = `
+          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+            <h2 id="modalTitle">${escapeHtml(title)}</h2>
+            <p>${escapeHtml(message)}</p>
+            ${inputHtml}
+            <div class="modal-actions">
+              <button class="control-button" id="cancelModal" type="button">${escapeHtml(cancelLabel)}</button>
+              <button class="${danger ? "delete-button" : "control-button active"}" id="confirmModal" type="button">${escapeHtml(confirmLabel)}</button>
+            </div>
+          </div>
+        `;
+
+        document.body.append(backdrop);
+
+        const input = backdrop.querySelector("#modalInput");
+        const closeModal = () => backdrop.remove();
+        const confirm = () => {
+          const value = input ? input.value.trim() : "";
+
+          if (input && !value) {
+            input.focus();
+            return;
+          }
+
+          closeModal();
+          onConfirm(value);
+        };
+
+        backdrop.querySelector("#cancelModal").addEventListener("click", closeModal);
+        backdrop.querySelector("#confirmModal").addEventListener("click", confirm);
+        backdrop.addEventListener("click", (event) => {
+          if (event.target === backdrop) {
+            closeModal();
+          }
+        });
+        backdrop.addEventListener("keydown", (event) => {
+          if (event.key === "Escape") {
+            closeModal();
+          }
+
+          if (event.key === "Enter" && input && document.activeElement === input) {
+            confirm();
+          }
+        });
+
+        if (input) {
+          input.focus();
+          input.select();
+        }
+      }
+
+      function showOptionModal({ title, message = "", options }) {
+        const backdrop = document.createElement("div");
+        backdrop.className = "modal-backdrop";
+        backdrop.innerHTML = `
+          <div class="modal" role="dialog" aria-modal="true" aria-labelledby="optionTitle">
+            <h2 id="optionTitle">${escapeHtml(title)}</h2>
+            ${message ? `<p>${escapeHtml(message)}</p>` : ""}
+            <div class="modal-options" id="modalOptions"></div>
+            <div class="modal-actions">
+              <button class="control-button" id="cancelModal" type="button">취소</button>
+            </div>
+          </div>
+        `;
+
+        const optionsContainer = backdrop.querySelector("#modalOptions");
+        options.forEach((option) => {
+          const button = document.createElement("button");
+          button.className = "modal-option";
+          button.type = "button";
+          button.innerHTML = option.html || escapeHtml(option.label);
+          button.addEventListener("click", () => {
+            backdrop.remove();
+            option.action();
+          });
+          optionsContainer.append(button);
+        });
+
+        document.body.append(backdrop);
+        backdrop.querySelector("#cancelModal").addEventListener("click", () => backdrop.remove());
+        backdrop.addEventListener("click", (event) => {
+          if (event.target === backdrop) {
+            backdrop.remove();
+          }
+        });
+      }
+
+      function renderFormatPanel(panel, title, options) {
+        panel.classList.add("open");
+        panel.innerHTML = `<span class="format-panel-title">${escapeHtml(title)}</span>`;
+
+        options.forEach((option) => {
+          const button = document.createElement("button");
+          button.className = "modal-option";
+          button.type = "button";
+          button.innerHTML = option.html || escapeHtml(option.label);
+          button.addEventListener("mousedown", (event) => event.preventDefault());
+          button.addEventListener("click", option.action);
+          panel.append(button);
+        });
+      }
+
+      function showListPanel(subject, editor, formatButtons, paletteButtons, fontSize, formatStatus, panel) {
+        renderFormatPanel(panel, "목록", [
+          { label: "단추형 목록", action: () => runEditorCommand("insertUnorderedList", subject, editor, formatButtons, paletteButtons, fontSize, formatStatus) },
+          { label: "번호형 목록", action: () => runEditorCommand("insertOrderedList", subject, editor, formatButtons, paletteButtons, fontSize, formatStatus) },
+          { label: "들여쓰기", action: () => runEditorCommand("indent", subject, editor, formatButtons, paletteButtons, fontSize, formatStatus) },
+          { label: "내어쓰기", action: () => runEditorCommand("outdent", subject, editor, formatButtons, paletteButtons, fontSize, formatStatus) },
+        ]);
+      }
+
+      function showColorPanel(subject, editor, formatButtons, paletteButtons, fontSize, formatStatus, panel) {
+        const textColors = [
+          ["검정", "#1d2720", "foreColor"],
+          ["빨강", "#c00000", "foreColor"],
+          ["주황", "#ed7d31", "foreColor"],
+          ["초록", "#70ad47", "foreColor"],
+          ["파랑", "#4472c4", "foreColor"],
+          ["보라", "#7030a0", "foreColor"],
+        ];
+        const highlightColors = [
+          ["노랑 강조", "#fff2cc", "hiliteColor"],
+          ["빨강 강조", "#f4cccc", "hiliteColor"],
+          ["초록 강조", "#d9ead3", "hiliteColor"],
+          ["파랑 강조", "#cfe2f3", "hiliteColor"],
+        ];
+        const options = [...textColors, ...highlightColors].map(([label, value, command]) => ({
+          html: `<span class="swatch" style="--swatch-color: ${value}"></span>${escapeHtml(label)}`,
+          action: () => {
+            editor.focus();
+            applyPaletteColor({ dataset: { paletteCommand: command, value } });
+            updateNote(subject, editor);
+            updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus);
+          },
+        }));
+
+        renderFormatPanel(panel, "색상", options);
+      }
+
+      function showTablePanel(subject, editor, panel) {
+        renderFormatPanel(panel, "표", [
+          { label: "표 삽입", action: () => insertTable(subject, editor) },
+          { label: "행 추가", action: () => applyTableAction("insertRowBelow", subject, editor) },
+          { label: "행 삭제", action: () => applyTableAction("deleteRow", subject, editor) },
+          { label: "열 추가", action: () => applyTableAction("insertColumnRight", subject, editor) },
+          { label: "열 삭제", action: () => applyTableAction("deleteColumn", subject, editor) },
+          { label: "표 제거", action: () => applyTableAction("deleteTable", subject, editor) },
+        ]);
+      }
+
+      function runEditorCommand(command, subject, editor, formatButtons, paletteButtons, fontSize, formatStatus) {
+        editor.focus();
+        document.execCommand(command, false, null);
+        updateNote(subject, editor);
+        updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus);
+      }
+
+      function showCreateFolderModal(parentId, initialValue = "") {
+        showConfirmModal({
+          title: "폴더 추가",
+          message: "새 폴더 이름을 입력하세요.",
+          inputLabel: "폴더 이름",
+          inputValue: initialValue,
+          confirmLabel: "추가",
+          onConfirm: (title) => createFolder(title, parentId),
+        });
+      }
+
+      function showCreateSubjectModal(folderId, initialValue = "") {
+        showConfirmModal({
+          title: "파일 추가",
+          message: "새 파일 이름을 입력하세요.",
+          inputLabel: "파일 이름",
+          inputValue: initialValue,
+          confirmLabel: "추가",
+          onConfirm: (title) => createSubject(title, folderId),
+        });
+      }
+
+      function plainTextToHtml(text) {
+        return text
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/\n/g, "<br>");
+      }
+
+      function getNoteText(subject) {
+        if (!subject.noteHtml) {
+          return subject.note || "";
+        }
+
+        const temporaryElement = document.createElement("div");
+        temporaryElement.innerHTML = subject.noteHtml;
+        return temporaryElement.innerText || "";
+      }
+
+      async function copyTemplateToClipboard(subject, button) {
+        const html = subject.noteHtml || plainTextToHtml(subject.note || "");
+        const text = getNoteText(subject);
+
+        try {
+          if (navigator.clipboard && window.ClipboardItem) {
+            await navigator.clipboard.write([
+              new ClipboardItem({
+                "text/html": new Blob([html], { type: "text/html" }),
+                "text/plain": new Blob([text], { type: "text/plain" }),
+              }),
+            ]);
+          } else if (navigator.clipboard) {
+            await navigator.clipboard.writeText(text);
+          } else {
+            copyTextWithFallback(text);
+          }
+        } catch {
+          copyTextWithFallback(text);
+        }
+
+        button.textContent = "복사됨";
+        button.classList.add("is-copied");
+        window.setTimeout(() => {
+          button.textContent = "양식 복사";
+          button.classList.remove("is-copied");
+        }, 1300);
+      }
+
+      function copyTextWithFallback(text) {
+        const temporaryTextarea = document.createElement("textarea");
+        temporaryTextarea.value = text;
+        temporaryTextarea.setAttribute("readonly", "");
+        temporaryTextarea.style.position = "fixed";
+        temporaryTextarea.style.left = "-9999px";
+        document.body.append(temporaryTextarea);
+        temporaryTextarea.select();
+        document.execCommand("copy");
+        temporaryTextarea.remove();
+      }
+
+      function insertHtmlAtCursor(html) {
+        document.execCommand("insertHTML", false, html);
+      }
+
+      function insertTable(subject, editor) {
+        const tableHtml = `
+          <table>
+            <tbody>
+              <tr><td><br></td><td><br></td><td><br></td></tr>
+              <tr><td><br></td><td><br></td><td><br></td></tr>
+              <tr><td><br></td><td><br></td><td><br></td></tr>
+            </tbody>
+          </table><br>
+        `;
+        insertHtmlAtCursor(tableHtml);
+        updateNote(subject, editor);
+      }
+
+      function getClosestTableCell(editor) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) {
+          return null;
+        }
+
+        let node = selection.anchorNode;
+        if (node.nodeType === Node.TEXT_NODE) {
+          node = node.parentElement;
+        }
+
+        while (node && node !== editor) {
+          if (node.tagName === "TD" || node.tagName === "TH") {
+            return node;
+          }
+          node = node.parentElement;
+        }
+
+        return null;
+      }
+
+      function applyTableAction(action, subject, editor) {
+        const cell = getClosestTableCell(editor);
+
+        if (!cell) {
+          return;
+        }
+
+        const row = cell.parentElement;
+        const table = cell.closest("table");
+        const rows = Array.from(table.rows);
+        const rowIndex = rows.indexOf(row);
+        const cellIndex = Array.from(row.cells).indexOf(cell);
+
+        if (action === "deleteTable") {
+          table.remove();
+          updateNote(subject, editor);
+          return;
+        }
+
+        if (action === "insertRowBelow") {
+          const newRow = row.cloneNode(true);
+          Array.from(newRow.cells).forEach((newCell) => {
+            newCell.innerHTML = "<br>";
+          });
+          row.after(newRow);
+        }
+
+        if (action === "deleteRow") {
+          if (rows.length > 1) {
+            row.remove();
+          } else {
+            Array.from(row.cells).forEach((targetCell) => {
+              targetCell.innerHTML = "<br>";
+            });
+          }
+        }
+
+        if (action === "insertColumnRight") {
+          rows.forEach((targetRow) => {
+            const sourceCell = targetRow.cells[cellIndex] || targetRow.cells[targetRow.cells.length - 1];
+            const newCell = sourceCell.cloneNode(false);
+            newCell.innerHTML = "<br>";
+            sourceCell.after(newCell);
+          });
+        }
+
+        if (action === "deleteColumn") {
+          const columnCount = rows[0]?.cells.length || 0;
+          rows.forEach((targetRow) => {
+            if (columnCount > 1) {
+              targetRow.deleteCell(Math.min(cellIndex, targetRow.cells.length - 1));
+            } else if (targetRow.cells[0]) {
+              targetRow.cells[0].innerHTML = "<br>";
+            }
+          });
+        }
+
+        updateNote(subject, editor);
+        const targetRow = table.rows[Math.min(rowIndex, table.rows.length - 1)];
+        const targetCell = targetRow?.cells[Math.min(cellIndex, targetRow.cells.length - 1)];
+        if (targetCell) {
+          placeCursorInElement(targetCell);
+        }
+      }
+
+      function placeCursorInElement(element) {
+        const range = document.createRange();
+        range.selectNodeContents(element);
+        range.collapse(false);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+      }
+
+      function insertLink(subject, editor) {
+        const rawUrl = window.prompt("삽입할 링크 주소를 입력하세요.");
+
+        if (!rawUrl) {
+          return;
+        }
+
+        const url = normalizeUrl(rawUrl.trim());
+        const selection = window.getSelection();
+        const selectedText = selection.toString();
+
+        if (selectedText) {
+          document.execCommand("createLink", false, url);
+        } else {
+          insertHtmlAtCursor(`<a href="${escapeHtml(url)}" target="_blank">${escapeHtml(url)}</a>`);
+        }
+
+        updateNote(subject, editor);
+      }
+
+      function normalizeUrl(url) {
+        if (/^(https?:\/\/|mailto:|tel:)/i.test(url)) {
+          return url;
+        }
+
+        return `https://${url}`;
+      }
+
+      function insertImageFile(file, subject, editor) {
+        if (!file.type.startsWith("image/")) {
+          return;
+        }
+
+        const reader = new FileReader();
+        reader.addEventListener("load", () => {
+          insertHtmlAtCursor(
+            `<img src="${reader.result}" alt="${escapeHtml(file.name)}"><br>`,
+          );
+          updateNote(subject, editor);
+        });
+        reader.readAsDataURL(file);
+      }
+
+      async function pastePlainTextFromClipboard(subject, editor) {
+        editor.focus();
+
+        try {
+          if (!navigator.clipboard?.readText) {
+            throw new Error("clipboard unavailable");
+          }
+
+          const text = await navigator.clipboard.readText();
+          document.execCommand("insertText", false, text);
+          updateNote(subject, editor);
+        } catch {
+          showConfirmModal({
+            title: "텍스트 붙여넣기",
+            message: "브라우저가 클립보드 접근을 막았습니다. 복사한 내용을 이 창에 붙여넣고 추가를 눌러주세요.",
+            inputLabel: "붙여넣을 텍스트",
+            confirmLabel: "추가",
+            onConfirm: (text) => {
+              editor.focus();
+              document.execCommand("insertText", false, text);
+              updateNote(subject, editor);
+            },
+          });
+        }
+      }
+
+      function normalizeColor(color) {
+        if (!color || color === "transparent") {
+          return "transparent";
+        }
+
+        if (color.startsWith("#")) {
+          return color.toLowerCase();
+        }
+
+        const rgbMatch = color.match(/\d+/g);
+        if (!rgbMatch || rgbMatch.length < 3) {
+          return color.toLowerCase();
+        }
+
+        return `#${rgbMatch
+          .slice(0, 3)
+          .map((value) => Number(value).toString(16).padStart(2, "0"))
+          .join("")}`;
+      }
+
+      function getCommandColor(command) {
+        const value = document.queryCommandValue(command);
+        const normalizedColor = normalizeColor(value);
+
+        if (command === "hiliteColor" && normalizedColor === DEFAULT_BACKGROUND_COLOR) {
+          return "transparent";
+        }
+
+        return normalizedColor;
+      }
+
+      function applyPaletteColor(button) {
+        const command = button.dataset.paletteCommand;
+        const selectedColor = normalizeColor(button.dataset.value);
+        const currentColor = getCommandColor(command);
+
+        if (currentColor === selectedColor) {
+          const resetColor =
+            command === "foreColor" ? DEFAULT_TEXT_COLOR : DEFAULT_BACKGROUND_COLOR;
+          document.execCommand(command, false, resetColor);
+          return;
+        }
+
+        document.execCommand(command, false, selectedColor);
+      }
+
+      function updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus) {
+        const activeValues = [];
+        const currentFontSize = document.queryCommandValue("fontSize") || "";
+        const currentTextColor = getCommandColor("foreColor");
+        const currentHighlightColor = getCommandColor("hiliteColor");
+
+        formatButtons.forEach((button) => {
+          const command = button.dataset.command;
+          const stateCommands = [
+            "bold",
+            "italic",
+            "underline",
+            "strikeThrough",
+            "insertUnorderedList",
+            "insertOrderedList",
+          ];
+
+          if (stateCommands.includes(command) && document.queryCommandState(command)) {
+            button.classList.add("active");
+            activeValues.push(button.textContent.trim());
+          } else {
+            button.classList.remove("active");
+          }
+        });
+
+        paletteButtons.forEach((button) => {
+          const command = button.dataset.paletteCommand;
+          const value = normalizeColor(button.dataset.value);
+          const currentColor = command === "foreColor" ? currentTextColor : currentHighlightColor;
+          const isActive = currentColor === value;
+          button.classList.toggle("active", isActive);
+
+          if (isActive) {
+            activeValues.push(button.title);
+          }
+        });
+
+        fontSize.value = FONT_SIZE_LABELS[currentFontSize] ? currentFontSize : "";
+        fontSize.classList.toggle("active", Boolean(fontSize.value));
+
+        if (fontSize.value) {
+          activeValues.unshift(`크기: ${FONT_SIZE_LABELS[fontSize.value]}`);
+        }
+
+        formatStatus.textContent = activeValues.length
+          ? `선택: ${activeValues.join(" · ")}`
+          : "선택값 없음";
+      }
+
+      function getClosestListItem(editor) {
+        const selection = window.getSelection();
+        if (!selection.rangeCount) {
+          return null;
+        }
+
+        let node = selection.anchorNode;
+        if (node.nodeType === Node.TEXT_NODE) {
+          node = node.parentElement;
+        }
+
+        while (node && node !== editor) {
+          if (node.tagName === "LI") {
+            return node;
+          }
+          node = node.parentElement;
+        }
+
+        return null;
+      }
+
+      function handleEditorKeydown(
+        event,
+        subject,
+        editor,
+        formatButtons,
+        paletteButtons,
+        fontSize,
+        formatStatus,
+      ) {
+        const key = event.key.toLowerCase();
+        const code = event.code;
+        const isCommandKey = event.metaKey || event.ctrlKey;
+        const shortcutCommand = getShortcutCommand(event, code, isCommandKey);
+
+        if (shortcutCommand) {
+          event.preventDefault();
+          event.stopPropagation();
+          editor.focus();
+
+          if (shortcutCommand === "createLink") {
+            insertLink(subject, editor);
+          } else if (shortcutCommand.startsWith("table:")) {
+            applyTableAction(shortcutCommand.replace("table:", ""), subject, editor);
+          } else {
+            document.execCommand(shortcutCommand, false, null);
+            updateNote(subject, editor);
+          }
+
+          updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus);
+          return;
+        }
+
+        const listItem = getClosestListItem(editor);
+
+        if (event.key === "Tab" && listItem) {
+          event.preventDefault();
+          document.execCommand(event.shiftKey ? "outdent" : "indent");
+          updateNote(subject, editor);
+          return;
+        }
+
+        if (event.key === "Enter" && listItem && listItem.textContent.trim() === "") {
+          event.preventDefault();
+          document.execCommand("outdent");
+          updateNote(subject, editor);
+        }
+      }
+
+      function getShortcutCommand(event, code, isCommandKey) {
+        if (isCommandKey && !event.altKey && code === "KeyB") {
+          return "bold";
+        }
+
+        if (isCommandKey && !event.altKey && code === "KeyI") {
+          return "italic";
+        }
+
+        if (isCommandKey && !event.altKey && code === "KeyU") {
+          return "underline";
+        }
+
+        if (isCommandKey && !event.altKey && code === "KeyK") {
+          return "createLink";
+        }
+
+        if (isCommandKey && event.shiftKey && code === "Digit7") {
+          return "insertOrderedList";
+        }
+
+        if (isCommandKey && event.shiftKey && code === "Digit8") {
+          return "insertUnorderedList";
+        }
+
+        if ((event.altKey || event.metaKey) && event.shiftKey && code === "Digit5") {
+          return "strikeThrough";
+        }
+
+        if (isCommandKey && code === "Backslash") {
+          return "removeFormat";
+        }
+
+        if (isCommandKey && event.altKey && code === "ArrowDown") {
+          return "table:insertRowBelow";
+        }
+
+        if (isCommandKey && event.altKey && code === "ArrowUp") {
+          return "table:deleteRow";
+        }
+
+        if (isCommandKey && event.altKey && code === "ArrowRight") {
+          return "table:insertColumnRight";
+        }
+
+        if (isCommandKey && event.altKey && code === "ArrowLeft") {
+          return "table:deleteColumn";
+        }
+
+        if (isCommandKey && event.altKey && (code === "Backspace" || code === "Delete")) {
+          return "table:deleteTable";
+        }
+
+        if (event.altKey && event.shiftKey && code === "KeyR") {
+          return "table:insertRowBelow";
+        }
+
+        if (event.altKey && event.shiftKey && code === "KeyE") {
+          return "table:deleteRow";
+        }
+
+        if (event.altKey && event.shiftKey && code === "KeyC") {
+          return "table:insertColumnRight";
+        }
+
+        if (event.altKey && event.shiftKey && code === "KeyX") {
+          return "table:deleteColumn";
+        }
+
+        if (event.altKey && event.shiftKey && code === "KeyT") {
+          return "table:deleteTable";
+        }
+
+        return null;
+      }
+
+      function updateNote(subject, editor) {
+        subject.noteHtml = editor.innerHTML;
+        subject.note = editor.innerText;
+        subject.updatedAt = Date.now();
+        saveState();
+        renderFolders();
+      }
+
+      function render() {
+        renderFolders();
+        renderEditor();
+      }
+
+      function renderToolsPanel() {
+        toolsPanel.classList.toggle("is-hidden", !toolsOpen);
+        toolsToggle.setAttribute("aria-expanded", String(toolsOpen));
+        toolsToggleIcon.textContent = toolsOpen ? "×" : "+";
+        toolsToggleText.textContent = toolsOpen ? "검색/추가 닫기" : "검색/추가 열기";
+      }
+
+      function createFolder(title, parentId) {
+        const folder = {
+          id: crypto.randomUUID(),
+          title,
+          parentId,
+        };
+
+        state.folders.push(folder);
+        activeFolderId = folder.id;
+        activeId = null;
+        saveState();
+        render();
+      }
+
+      function createSubject(title, folderId) {
+        if (folderId === ALL_FOLDERS_ID || folderId === DEFAULT_FOLDER_ID) {
+          showConfirmModal({
+            title: "파일 추가 불가",
+            message: "전체 또는 기본 폴더에서는 파일을 만들 수 없습니다. 학습 폴더를 선택한 뒤 추가해 주세요.",
+            confirmLabel: "확인",
+            onConfirm: () => {},
+          });
+          return;
+        }
+
+        const subject = {
+          id: crypto.randomUUID(),
+          folderId,
+          title,
+          note: "",
+          isReadonly: false,
+          isLocked: false,
+          updatedAt: Date.now(),
+        };
+
+        state.subjects.unshift(subject);
+        activeFolderId = subject.folderId;
+        activeId = subject.id;
+        saveState();
+        render();
+      }
+
+      toolsToggle.addEventListener("click", () => {
+        toolsOpen = !toolsOpen;
+        renderToolsPanel();
+
+        if (toolsOpen) {
+          subjectInput.focus();
+        }
+      });
+
+      folderForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const title = folderInput.value.trim();
+
+        if (!title) {
+          folderInput.focus();
+          return;
+        }
+
+        folderInput.value = "";
+        showCreateFolderModal(activeFolderId === ALL_FOLDERS_ID ? null : activeFolderId, title);
+      });
+
+      subjectForm.addEventListener("submit", (event) => {
+        event.preventDefault();
+        const title = subjectInput.value.trim();
+
+        if (!title) {
+          subjectInput.focus();
+          return;
+        }
+
+        subjectInput.value = "";
+        showCreateSubjectModal(activeFolderId, title);
+      });
+
+      searchInput.addEventListener("input", renderFolders);
+      window.addEventListener("beforeunload", saveState);
+
+      renderToolsPanel();
+      render();
+    </script>
+  </body>
+</html>

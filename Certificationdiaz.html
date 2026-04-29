@@ -278,6 +278,51 @@
         display: none;
       }
 
+      .storage-meter {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdfb;
+        padding: 10px 12px;
+      }
+
+      .storage-meter strong {
+        display: block;
+        font-size: 13px;
+      }
+
+      .storage-meter span {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
+      .storage-bar {
+        overflow: hidden;
+        height: 7px;
+        border-radius: 999px;
+        background: var(--panel-strong);
+      }
+
+      .storage-bar-fill {
+        display: block;
+        width: 0;
+        height: 100%;
+        border-radius: inherit;
+        background: var(--accent);
+        transition: width 0.2s ease, background 0.2s ease;
+      }
+
+      .storage-bar-fill.warning {
+        background: #b9861b;
+      }
+
+      .storage-bar-fill.danger {
+        background: var(--danger);
+      }
+
       .subject-item {
         display: grid;
         grid-template-columns: 1fr auto;
@@ -986,6 +1031,16 @@
         </section>
 
         <div class="subject-list" id="subjectList"></div>
+
+        <div class="storage-meter" aria-label="저장 용량">
+          <div>
+            <strong id="storageUsage">저장 용량 계산 중</strong>
+            <span id="storageDetail">예상 한도 5MB 기준</span>
+          </div>
+          <div class="storage-bar" aria-hidden="true">
+            <span class="storage-bar-fill" id="storageBar"></span>
+          </div>
+        </div>
       </aside>
 
       <main class="main" id="main"></main>
@@ -993,6 +1048,7 @@
 
     <script>
       const STORAGE_KEY = "certificate-study-space-v1";
+      const ESTIMATED_STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
       const DEFAULT_FOLDER_ID = "default-folder";
       const LEGACY_GENERAL_FOLDER_ID = "general-study-folder";
       const ALL_FOLDERS_ID = "all-folders";
@@ -1082,6 +1138,9 @@
       const subjectInput = document.querySelector("#subjectInput");
       const searchInput = document.querySelector("#searchInput");
       const subjectList = document.querySelector("#subjectList");
+      const storageUsage = document.querySelector("#storageUsage");
+      const storageDetail = document.querySelector("#storageDetail");
+      const storageBar = document.querySelector("#storageBar");
       const main = document.querySelector("#main");
 
       function loadState() {
@@ -1116,7 +1175,54 @@
       function saveState() {
         state.activeId = activeId;
         state.activeFolderId = activeFolderId;
-        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        try {
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+        } catch {
+          showConfirmModal({
+            title: "저장 용량 부족",
+            message: "브라우저 저장 공간이 부족합니다. 큰 이미지나 오래된 파일을 줄이면 다시 저장할 수 있습니다.",
+            confirmLabel: "확인",
+            cancelLabel: "닫기",
+            onConfirm: () => {},
+          });
+        }
+        renderStorageUsage();
+      }
+
+      function getStorageBytes() {
+        const value = localStorage.getItem(STORAGE_KEY) || "";
+
+        if (typeof Blob === "function") {
+          return new Blob([value]).size;
+        }
+
+        return value.length * 2;
+      }
+
+      function formatBytes(bytes) {
+        if (bytes >= 1024 * 1024) {
+          return `${(bytes / 1024 / 1024).toFixed(2)}MB`;
+        }
+
+        if (bytes >= 1024) {
+          return `${(bytes / 1024).toFixed(1)}KB`;
+        }
+
+        return `${bytes}B`;
+      }
+
+      function renderStorageUsage() {
+        if (!storageUsage || !storageDetail || !storageBar) {
+          return;
+        }
+
+        const bytes = getStorageBytes();
+        const percent = Math.min((bytes / ESTIMATED_STORAGE_LIMIT_BYTES) * 100, 100);
+        storageUsage.textContent = `${formatBytes(bytes)} 사용 중`;
+        storageDetail.textContent = `예상 한도 ${formatBytes(ESTIMATED_STORAGE_LIMIT_BYTES)} 기준`;
+        storageBar.style.width = `${percent}%`;
+        storageBar.classList.toggle("warning", percent >= 70 && percent < 90);
+        storageBar.classList.toggle("danger", percent >= 90);
       }
 
       function migrateState(savedState) {
@@ -2702,6 +2808,7 @@
       function render() {
         renderFolders();
         renderEditor();
+        renderStorageUsage();
       }
 
       function renderToolsPanel() {

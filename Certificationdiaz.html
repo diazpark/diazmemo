@@ -123,6 +123,20 @@
         display: none;
       }
 
+      .backup-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
+      }
+
+      .backup-actions .control-button {
+        display: grid;
+        place-items: center;
+        justify-self: stretch;
+        text-align: center;
+        cursor: pointer;
+      }
+
       .is-hidden {
         display: none;
       }
@@ -1023,6 +1037,12 @@
           </form>
 
           <input class="search" id="searchInput" type="search" placeholder="과목 검색" />
+
+          <div class="backup-actions">
+            <button class="control-button" id="exportButton" type="button">백업</button>
+            <label class="control-button" for="importInput">복원</label>
+            <input class="is-hidden" id="importInput" type="file" accept="application/json" />
+          </div>
         </div>
 
         <section class="folder-panel" aria-label="폴더">
@@ -1048,7 +1068,10 @@
 
     <script>
       const STORAGE_KEY = "certificate-study-space-v1";
-      const ESTIMATED_STORAGE_LIMIT_BYTES = 5 * 1024 * 1024;
+      const DATABASE_NAME = "certificate-study-space-db";
+      const DATABASE_STORE_NAME = "study-state";
+      const DATABASE_STATE_KEY = "state";
+      const FALLBACK_STORAGE_LIMIT_BYTES = 50 * 1024 * 1024;
       const DEFAULT_FOLDER_ID = "default-folder";
       const LEGACY_GENERAL_FOLDER_ID = "general-study-folder";
       const ALL_FOLDERS_ID = "all-folders";
@@ -1120,7 +1143,10 @@
 
       const defaultFolders = [{ id: DEFAULT_FOLDER_ID, title: "기본", parentId: null }];
 
-      let state = loadState();
+      let estimatedStorageLimitBytes = FALLBACK_STORAGE_LIMIT_BYTES;
+      let saveRequestId = 0;
+      let saveErrorShown = false;
+      let state = createDefaultState();
       let activeId = state.activeId || null;
       let activeFolderId = state.activeFolderId || DEFAULT_FOLDER_ID;
       let toolsOpen = false;
@@ -1137,22 +1163,117 @@
       const subjectForm = document.querySelector("#subjectForm");
       const subjectInput = document.querySelector("#subjectInput");
       const searchInput = document.querySelector("#searchInput");
+      const exportButton = document.querySelector("#exportButton");
+      const importInput = document.querySelector("#importInput");
       const subjectList = document.querySelector("#subjectList");
       const storageUsage = document.querySelector("#storageUsage");
       const storageDetail = document.querySelector("#storageDetail");
       const storageBar = document.querySelector("#storageBar");
       const main = document.querySelector("#main");
 
-      function loadState() {
+      function createDefaultState() {
+        return {
+          folders: defaultFolders.map((folder) => ({ ...folder })),
+          subjects: defaultSubjects.map((subject) => ({ ...subject })),
+          activeFolderId: ALL_FOLDERS_ID,
+          activeId: null,
+        };
+      }
+
+      function openStudyDatabase() {
+        return new Promise((resolve, reject) => {
+          if (!("indexedDB" in window)) {
+            reject(new Error("IndexedDB unavailable"));
+            return;
+          }
+
+          const request = indexedDB.open(DATABASE_NAME, 1);
+
+          request.addEventListener("upgradeneeded", () => {
+            const database = request.result;
+            if (!database.objectStoreNames.contains(DATABASE_STORE_NAME)) {
+              database.createObjectStore(DATABASE_STORE_NAME);
+            }
+          });
+
+          request.addEventListener("success", () => resolve(request.result));
+          request.addEventListener("error", () => reject(request.error));
+        });
+      }
+
+      async function readStateFromIndexedDB() {
+        const database = await openStudyDatabase();
+
+        return new Promise((resolve, reject) => {
+          const transaction = database.transaction(DATABASE_STORE_NAME, "readonly");
+          const store = transaction.objectStore(DATABASE_STORE_NAME);
+          const request = store.get(DATABASE_STATE_KEY);
+
+          request.addEventListener("success", () => resolve(request.result || null));
+          request.addEventListener("error", () => reject(request.error));
+          transaction.addEventListener("complete", () => database.close());
+          transaction.addEventListener("abort", () => {
+            database.close();
+            reject(transaction.error);
+          });
+        });
+      }
+
+      async function writeStateToIndexedDB(nextState) {
+        const database = await openStudyDatabase();
+
+        return new Promise((resolve, reject) => {
+          const transaction = database.transaction(DATABASE_STORE_NAME, "readwrite");
+          const store = transaction.objectStore(DATABASE_STORE_NAME);
+          store.put(nextState, DATABASE_STATE_KEY);
+
+          transaction.addEventListener("complete", () => {
+            database.close();
+            resolve();
+          });
+          transaction.addEventListener("abort", () => {
+            database.close();
+            reject(transaction.error);
+          });
+          transaction.addEventListener("error", () => {
+            database.close();
+            reject(transaction.error);
+          });
+        });
+      }
+
+      async function loadState() {
+        try {
+          const indexedState = await readStateFromIndexedDB();
+
+          if (indexedState && Array.isArray(indexedState.subjects)) {
+            return migrateState(indexedState);
+          }
+        } catch {
+          const fallbackState = loadLegacyLocalStorageState();
+          if (fallbackState) {
+            return fallbackState;
+          }
+        }
+
+        const legacyState = loadLegacyLocalStorageState();
+        if (legacyState) {
+          try {
+            await writeStateToIndexedDB(legacyState);
+          } catch {
+            // Keep the migrated legacy state in memory even if the first IndexedDB write fails.
+          }
+          return legacyState;
+        }
+
+        return createDefaultState();
+      }
+
+      function loadLegacyLocalStorageState() {
         const saved = localStorage.getItem(STORAGE_KEY);
 
         if (!saved) {
-          return {
-            folders: defaultFolders,
-            subjects: defaultSubjects,
-            activeFolderId: ALL_FOLDERS_ID,
-            activeId: null,
-          };
+          return null;
         }
 
         try {
@@ -1164,20 +1285,32 @@
           localStorage.removeItem(STORAGE_KEY);
         }
 
-        return {
-          folders: defaultFolders,
-          subjects: defaultSubjects,
-          activeFolderId: ALL_FOLDERS_ID,
-          activeId: null,
-        };
+        return null;
       }
 
       function saveState() {
         state.activeId = activeId;
         state.activeFolderId = activeFolderId;
-        try {
-          localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-        } catch {
+        const requestId = ++saveRequestId;
+
+        writeStateToIndexedDB(cloneState(state))
+          .then(() => {
+            if (requestId === saveRequestId) {
+              saveErrorShown = false;
+            }
+          })
+          .catch(() => {
+            if (saveErrorShown) {
+              return;
+            }
+
+            saveErrorShown = true;
+            try {
+              localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+            } catch {
+              // If both IndexedDB and localStorage fail, show the user one clear message.
+            }
+
           showConfirmModal({
             title: "저장 용량 부족",
             message: "브라우저 저장 공간이 부족합니다. 큰 이미지나 오래된 파일을 줄이면 다시 저장할 수 있습니다.",
@@ -1185,12 +1318,21 @@
             cancelLabel: "닫기",
             onConfirm: () => {},
           });
-        }
+          });
+
         renderStorageUsage();
       }
 
+      function cloneState(value) {
+        if (typeof structuredClone === "function") {
+          return structuredClone(value);
+        }
+
+        return JSON.parse(JSON.stringify(value));
+      }
+
       function getStorageBytes() {
-        const value = localStorage.getItem(STORAGE_KEY) || "";
+        const value = JSON.stringify(state);
 
         if (typeof Blob === "function") {
           return new Blob([value]).size;
@@ -1200,6 +1342,10 @@
       }
 
       function formatBytes(bytes) {
+        if (bytes >= 1024 * 1024 * 1024) {
+          return `${(bytes / 1024 / 1024 / 1024).toFixed(2)}GB`;
+        }
+
         if (bytes >= 1024 * 1024) {
           return `${(bytes / 1024 / 1024).toFixed(2)}MB`;
         }
@@ -1217,12 +1363,28 @@
         }
 
         const bytes = getStorageBytes();
-        const percent = Math.min((bytes / ESTIMATED_STORAGE_LIMIT_BYTES) * 100, 100);
+        const percent = Math.min((bytes / estimatedStorageLimitBytes) * 100, 100);
         storageUsage.textContent = `${formatBytes(bytes)} 사용 중`;
-        storageDetail.textContent = `예상 한도 ${formatBytes(ESTIMATED_STORAGE_LIMIT_BYTES)} 기준`;
+        storageDetail.textContent = `IndexedDB 저장 · 예상 여유 ${formatBytes(estimatedStorageLimitBytes)}`;
         storageBar.style.width = `${percent}%`;
         storageBar.classList.toggle("warning", percent >= 70 && percent < 90);
         storageBar.classList.toggle("danger", percent >= 90);
+      }
+
+      async function updateStorageEstimate() {
+        if (!navigator.storage?.estimate) {
+          return;
+        }
+
+        try {
+          const estimate = await navigator.storage.estimate();
+          if (estimate.quota) {
+            estimatedStorageLimitBytes = estimate.quota;
+            renderStorageUsage();
+          }
+        } catch {
+          // Keep the conservative fallback estimate.
+        }
       }
 
       function migrateState(savedState) {
@@ -2818,6 +2980,82 @@
         toolsToggleText.textContent = toolsOpen ? "검색/추가 닫기" : "검색/추가 열기";
       }
 
+      function exportBackup() {
+        const backup = {
+          version: 2,
+          exportedAt: new Date().toISOString(),
+          storage: "IndexedDB",
+          state: cloneState(state),
+        };
+        const blob = new Blob([JSON.stringify(backup, null, 2)], {
+          type: "application/json",
+        });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        const dateLabel = new Date().toISOString().slice(0, 10);
+
+        link.href = url;
+        link.download = `Certificationdiaz-backup-${dateLabel}.json`;
+        document.body.append(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+      }
+
+      function importBackupFile(file) {
+        const reader = new FileReader();
+
+        reader.addEventListener("load", () => {
+          try {
+            const parsed = JSON.parse(reader.result);
+            const nextState = parsed.state || parsed;
+
+            if (!Array.isArray(nextState.subjects)) {
+              throw new Error("Invalid backup");
+            }
+
+            showConfirmModal({
+              title: "백업 복원",
+              message: "현재 메모 공간이 백업 파일 내용으로 바뀝니다. 계속하시겠습니까?",
+              confirmLabel: "복원",
+              danger: true,
+              onConfirm: () => {
+                state = migrateState(nextState);
+                activeId = state.activeId || null;
+                activeFolderId = state.activeFolderId || ALL_FOLDERS_ID;
+                saveState();
+                render();
+              },
+            });
+          } catch {
+            showConfirmModal({
+              title: "복원 실패",
+              message: "백업 파일 형식이 올바르지 않습니다.",
+              confirmLabel: "확인",
+              cancelLabel: "닫기",
+              onConfirm: () => {},
+            });
+          }
+        });
+
+        reader.readAsText(file);
+      }
+
+      async function initializeApp() {
+        updateStorageEstimate();
+
+        try {
+          state = await loadState();
+        } catch {
+          state = createDefaultState();
+        }
+
+        activeId = state.activeId || null;
+        activeFolderId = state.activeFolderId || ALL_FOLDERS_ID;
+        renderToolsPanel();
+        render();
+      }
+
       function createFolder(title, parentId) {
         const folder = {
           id: crypto.randomUUID(),
@@ -2896,10 +3134,18 @@
       });
 
       searchInput.addEventListener("input", renderFolders);
+      exportButton.addEventListener("click", exportBackup);
+      importInput.addEventListener("change", () => {
+        const [file] = importInput.files;
+        importInput.value = "";
+
+        if (file) {
+          importBackupFile(file);
+        }
+      });
       window.addEventListener("beforeunload", saveState);
 
-      renderToolsPanel();
-      render();
+      initializeApp();
     </script>
   </body>
 </html>

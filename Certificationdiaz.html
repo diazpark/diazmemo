@@ -261,11 +261,21 @@
         border: 0;
         background: transparent;
         color: inherit;
+        display: flex;
+        gap: 6px;
+        align-items: center;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
         font-weight: 800;
         text-align: left;
+      }
+
+      .favorite-star {
+        color: #c9971a;
+        flex: 0 0 auto;
+        font-size: 13px;
+        line-height: 1;
       }
 
       .folder-count {
@@ -344,6 +354,73 @@
         line-height: 1.35;
       }
 
+      .backup-reminder,
+      .quick-access {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdfb;
+        padding: 10px 12px;
+      }
+
+      .backup-reminder {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+        line-height: 1.35;
+      }
+
+      .backup-reminder.warning {
+        color: var(--danger);
+      }
+
+      .quick-access {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .quick-access-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+      }
+
+      .quick-access-title {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .quick-access-button {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 8px;
+        align-items: center;
+        border-radius: 8px;
+        background: transparent;
+        color: var(--text);
+        padding: 7px 8px;
+        text-align: left;
+      }
+
+      .quick-access-button:hover {
+        background: var(--panel-strong);
+      }
+
+      .quick-access-button span {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .quick-access-button small {
+        color: var(--muted);
+        font-size: 11px;
+        font-weight: 800;
+      }
+
       .subject-item {
         display: grid;
         grid-template-columns: 1fr auto;
@@ -389,6 +466,9 @@
       }
 
       .subject-name {
+        display: flex;
+        gap: 6px;
+        align-items: center;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -489,7 +569,7 @@
 
       .browser-item {
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr);
+        grid-template-columns: auto minmax(0, 1fr) auto;
         gap: 12px;
         align-items: center;
         min-height: 72px;
@@ -554,6 +634,29 @@
         color: var(--muted);
         font-size: 12px;
         margin-top: 3px;
+      }
+
+      .browser-favorite {
+        display: grid;
+        place-items: center;
+        width: 34px;
+        height: 34px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        color: var(--muted);
+        font-size: 17px;
+        font-weight: 900;
+      }
+
+      .browser-favorite.active {
+        border-color: rgba(201, 151, 26, 0.4);
+        background: #fff6d8;
+        color: #c9971a;
+      }
+
+      .browser-favorite:hover {
+        background: var(--panel-strong);
       }
 
       .browser-empty {
@@ -716,6 +819,43 @@
         color: var(--muted);
         font-size: 13px;
         white-space: nowrap;
+      }
+
+      .note-stats {
+        grid-column: 1 / -1;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
+      }
+
+      .review-date {
+        width: 140px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #fbfdfb;
+        color: var(--text);
+        padding: 9px 10px;
+        outline: none;
+      }
+
+      .review-shortcuts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+      }
+
+      .review-chip {
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        color: var(--accent-dark);
+        padding: 8px 9px;
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .review-chip:hover {
+        background: var(--panel-strong);
       }
 
       .delete-button {
@@ -1060,7 +1200,7 @@
             <button class="add-button" type="submit" aria-label="과목 추가">+</button>
           </form>
 
-          <input class="search" id="searchInput" type="search" placeholder="과목 검색" />
+          <input class="search" id="searchInput" type="search" placeholder="과목/메모 검색" />
 
           <div class="backup-actions">
             <button class="control-button" id="exportButton" type="button">백업</button>
@@ -1077,6 +1217,8 @@
 
         <div class="subject-list" id="subjectList"></div>
 
+        <div class="quick-access" id="quickAccess"></div>
+
         <div class="storage-meter" aria-label="저장 용량">
           <div>
             <strong id="storageUsage">저장 용량 계산 중</strong>
@@ -1086,6 +1228,7 @@
             <span class="storage-bar-fill" id="storageBar"></span>
           </div>
           <p class="storage-warning">주의: 브라우저 데이터 삭제 시 메모가 사라질 수 있습니다.</p>
+          <div class="backup-reminder" id="backupReminder">백업 상태 확인 중</div>
         </div>
       </aside>
 
@@ -1193,15 +1336,18 @@
       const exportNoteButton = document.querySelector("#exportNoteButton");
       const importInput = document.querySelector("#importInput");
       const subjectList = document.querySelector("#subjectList");
+      const quickAccess = document.querySelector("#quickAccess");
       const storageUsage = document.querySelector("#storageUsage");
       const storageDetail = document.querySelector("#storageDetail");
       const storageBar = document.querySelector("#storageBar");
+      const backupReminder = document.querySelector("#backupReminder");
       const main = document.querySelector("#main");
 
       function createDefaultState() {
         return {
           folders: defaultFolders.map((folder) => ({ ...folder })),
           subjects: defaultSubjects.map((subject) => ({ ...subject })),
+          lastBackupAt: null,
           activeFolderId: ALL_FOLDERS_ID,
           activeId: null,
         };
@@ -1396,6 +1542,24 @@
         storageBar.style.width = `${percent}%`;
         storageBar.classList.toggle("warning", percent >= 70 && percent < 90);
         storageBar.classList.toggle("danger", percent >= 90);
+        renderBackupReminder(percent);
+      }
+
+      function renderBackupReminder(percent) {
+        if (!backupReminder) {
+          return;
+        }
+
+        const lastBackupAt = state.lastBackupAt || null;
+        const daysSinceBackup = lastBackupAt
+          ? Math.floor((Date.now() - lastBackupAt) / 86400000)
+          : null;
+        const shouldWarn = !lastBackupAt || daysSinceBackup >= 7 || percent >= 70;
+
+        backupReminder.classList.toggle("warning", shouldWarn);
+        backupReminder.textContent = lastBackupAt
+          ? `마지막 백업: ${formatDateOnly(lastBackupAt)}${shouldWarn ? " · 백업 권장" : ""}`
+          : "아직 백업 기록이 없습니다. 백업을 권장합니다.";
       }
 
       async function updateStorageEstimate() {
@@ -1435,6 +1599,7 @@
 
         const normalizedFolders = folders.map((folder) => ({
           ...folder,
+          isFavorite: Boolean(folder.isFavorite),
           parentId:
             folder.parentId === DEFAULT_FOLDER_ID || !folderIds.has(folder.parentId)
               ? null
@@ -1451,6 +1616,10 @@
             noteHtml: systemType === "shortcuts" ? plainTextToHtml(SHORTCUTS_NOTE) : subject.noteHtml,
             isReadonly: Boolean(subject.isReadonly),
             isLocked: Boolean(subject.isLocked),
+            isFavorite: Boolean(subject.isFavorite),
+            lastOpenedAt: subject.lastOpenedAt || subject.updatedAt || Date.now(),
+            reviewAt: subject.reviewAt || "",
+            reviewHistory: Array.isArray(subject.reviewHistory) ? subject.reviewHistory : [],
             folderId: getSafeFolderId(subject, folderIds, normalizedFolders),
           };
         });
@@ -1468,6 +1637,7 @@
           ...savedState,
           folders: normalizedFolders,
           subjects,
+          lastBackupAt: savedState.lastBackupAt || null,
           activeId: restoredActiveId,
           activeFolderId: restoredActiveFolderId,
         };
@@ -1569,6 +1739,20 @@
           ]);
       }
 
+      function getSidebarFolderRows() {
+        const allFolderRow = {
+          folder: { id: ALL_FOLDERS_ID, title: "전체", parentId: null },
+          depth: 0,
+        };
+        const defaultFolder = state.folders.find((folder) => folder.id === DEFAULT_FOLDER_ID);
+        const defaultFolderRow = defaultFolder ? [{ folder: defaultFolder, depth: 1 }] : [];
+        const regularRows = getFolderTreeRows(null, 1).filter(
+          ({ folder }) => folder.id !== DEFAULT_FOLDER_ID,
+        );
+
+        return [allFolderRow, ...defaultFolderRow, ...regularRows];
+      }
+
       function getVisibleSubjects() {
         if (activeFolderId === ALL_FOLDERS_ID) {
           return [];
@@ -1579,16 +1763,28 @@
 
         return state.subjects.filter((subject) => {
           const matchesFolder = activeFolderIds.has(subject.folderId);
-          const matchesKeyword = subject.title.toLowerCase().includes(keyword);
+          const matchesKeyword = matchesSubjectKeyword(subject, keyword);
           return matchesFolder && matchesKeyword;
         });
       }
 
+      function matchesSubjectKeyword(subject, keyword) {
+        if (!keyword) {
+          return true;
+        }
+
+        return (
+          subject.title.toLowerCase().includes(keyword) ||
+          getNoteText(subject).toLowerCase().includes(keyword)
+        );
+      }
+
+      function sortFavoriteFirst(a, b) {
+        return Number(Boolean(b.isFavorite)) - Number(Boolean(a.isFavorite));
+      }
+
       function renderFolders() {
-        const folders = [
-          { folder: { id: ALL_FOLDERS_ID, title: "전체", parentId: null }, depth: 0 },
-          ...getFolderTreeRows(null, 1),
-        ];
+        const folders = getSidebarFolderRows();
         folderList.innerHTML = "";
 
         folders.forEach(({ folder, depth }) => {
@@ -1612,7 +1808,8 @@
           `;
 
           const folderButton = row.querySelector(".folder-name");
-          folderButton.textContent = folder.title;
+          folderButton.innerHTML = `${folder.isFavorite ? '<span class="favorite-star">★</span>' : ""}<span></span>`;
+          folderButton.querySelector("span:last-child").textContent = folder.title;
           folderButton.addEventListener("click", () => {
             activeFolderId = folder.id;
             activeId = null;
@@ -1686,8 +1883,8 @@
             const folderSubjects = state.subjects.filter(
               (subject) =>
                 subject.folderId === folder.id &&
-                subject.title.toLowerCase().includes(keyword),
-            );
+                matchesSubjectKeyword(subject, keyword),
+            ).sort(sortFavoriteFirst);
 
             folderSubjects.forEach((subject) => {
               folderList.append(createSubjectTreeItem(subject, depth + 1));
@@ -1708,11 +1905,11 @@
           <span class="note-count">${getNoteText(subject).length}자</span>
         `;
 
-        button.querySelector(".subject-name").textContent = subject.title;
+        const subjectName = button.querySelector(".subject-name");
+        subjectName.innerHTML = `${subject.isFavorite ? '<span class="favorite-star">★</span>' : ""}<span></span>`;
+        subjectName.querySelector("span:last-child").textContent = subject.title;
         button.addEventListener("click", () => {
-          activeId = subject.id;
-          saveState();
-          render();
+          openSubject(subject.id);
         });
 
         button.addEventListener("dragstart", (event) => {
@@ -1747,8 +1944,79 @@
         }).format(timestamp);
       }
 
+      function formatDateOnly(timestamp) {
+        return new Intl.DateTimeFormat("ko-KR", {
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit",
+        }).format(timestamp);
+      }
+
       function renderSubjects() {
         subjectList.innerHTML = "";
+      }
+
+      function openSubject(subjectId) {
+        const subject = state.subjects.find((item) => item.id === subjectId);
+
+        if (!subject) {
+          return;
+        }
+
+        activeFolderId = subject.folderId;
+        activeId = subject.id;
+        subject.lastOpenedAt = Date.now();
+        saveState();
+        render();
+      }
+
+      function renderQuickAccess() {
+        if (!quickAccess) {
+          return;
+        }
+
+        const favorites = state.subjects.filter((subject) => subject.isFavorite).slice(0, 4);
+        const recent = [...state.subjects]
+          .filter((subject) => !isProtectedDefaultSubject(subject))
+          .sort((a, b) => (b.lastOpenedAt || 0) - (a.lastOpenedAt || 0))
+          .slice(0, 4);
+        const due = state.subjects
+          .filter((subject) => getReviewState(subject) === "due")
+          .slice(0, 4);
+
+        const groups = [
+          { title: "오늘 복습", items: due, empty: "복습 예정 없음" },
+          { title: "즐겨찾기", items: favorites, empty: "즐겨찾기 없음" },
+          { title: "최근 파일", items: recent, empty: "최근 파일 없음" },
+        ];
+
+        quickAccess.innerHTML = groups
+          .map(
+            (group) => `
+              <div class="quick-access-group">
+                <div class="quick-access-title">${group.title}</div>
+                ${
+                  group.items.length
+                    ? group.items
+                        .map(
+                          (subject) => `
+                            <button class="quick-access-button" type="button" data-quick-subject-id="${subject.id}">
+                              <span>${escapeHtml(subject.title)}</span>
+                              <small>${getFolderTitle(subject.folderId)}</small>
+                            </button>
+                          `,
+                        )
+                        .join("")
+                    : `<div class="quick-access-button"><span>${group.empty}</span></div>`
+                }
+              </div>
+            `,
+          )
+          .join("");
+
+        quickAccess.querySelectorAll("[data-quick-subject-id]").forEach((button) => {
+          button.addEventListener("click", () => openSubject(button.dataset.quickSubjectId));
+        });
       }
 
       function canMoveFolderToFolder(folderId, targetFolderId) {
@@ -1844,10 +2112,15 @@
           return;
         }
 
+        const stats = getSubjectStats(subject);
+        const reviewState = getReviewState(subject);
+        const reviewCount = getReviewHistory(subject).length;
+
         main.innerHTML = `
           <section class="workspace">
             <div class="toolbar">
               <input class="note-title" id="noteTitle" type="text" aria-label="과목 이름" />
+              <div class="note-stats">${stats.characters}자 · 이미지 ${stats.images}개 · 파일 용량 ${formatBytes(stats.bytes)} · 복습 ${reviewCount}회${subject.reviewAt ? ` · 다음 ${escapeHtml(subject.reviewAt)}${reviewState === "due" ? " (오늘)" : ""}` : ""}</div>
               ${
                 isReadonlyTemplate
                   ? ""
@@ -1861,6 +2134,15 @@
                 isReadonlyTemplate
                   ? '<span class="readonly-badge">읽기 전용 양식</span><button class="copy-button" id="copyButton" type="button">양식 복사</button>'
                   : `<button class="control-button${subject.isReadonly ? " active" : ""}" id="readonlyToggle" type="button">${subject.isReadonly ? "읽기 전용 해제" : "읽기 전용"}</button>
+                    <button class="control-button${subject.isFavorite ? " active" : ""}" id="favoriteToggle" type="button">${subject.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}</button>
+                    <input class="review-date" id="reviewDate" type="date" value="${escapeHtml(subject.reviewAt || "")}" aria-label="복습일" title="복습일" />
+                    <button class="control-button" id="reviewCompleteButton" type="button">복습 완료</button>
+                    <div class="review-shortcuts" aria-label="다음 복습 추천">
+                      <button class="review-chip" type="button" data-review-days="1">+1일</button>
+                      <button class="review-chip" type="button" data-review-days="3">+3일</button>
+                      <button class="review-chip" type="button" data-review-days="7">+7일</button>
+                      <button class="review-chip" type="button" data-review-days="14">+14일</button>
+                    </div>
                     <button class="control-button" id="lockToggle" type="button">잠금</button>`
               }
             </div>
@@ -1897,6 +2179,10 @@
         const copyButton = document.querySelector("#copyButton");
         const readonlyToggle = document.querySelector("#readonlyToggle");
         const lockToggle = document.querySelector("#lockToggle");
+        const favoriteToggle = document.querySelector("#favoriteToggle");
+        const reviewDate = document.querySelector("#reviewDate");
+        const reviewCompleteButton = document.querySelector("#reviewCompleteButton");
+        const reviewShortcutButtons = document.querySelectorAll("[data-review-days]");
         const toolbarExportNoteButton = document.querySelector("#toolbarExportNoteButton");
         const formatButtons = document.querySelectorAll("[data-command]");
         const insertButtons = document.querySelectorAll("[data-insert]");
@@ -1921,6 +2207,14 @@
 
         readonlyToggle.addEventListener("click", () => toggleSubjectReadonly(subject));
         lockToggle.addEventListener("click", () => toggleSubjectLock(subject));
+        favoriteToggle.addEventListener("click", () => toggleSubjectFavorite(subject));
+        reviewDate.addEventListener("change", () => updateSubjectReviewDate(subject, reviewDate.value));
+        reviewCompleteButton.addEventListener("click", () => completeSubjectReview(subject));
+        reviewShortcutButtons.forEach((button) => {
+          button.addEventListener("click", () =>
+            scheduleSubjectReview(subject, Number(button.dataset.reviewDays)),
+          );
+        });
         toolbarExportNoteButton.addEventListener("click", exportCurrentNote);
         if (!subject.isReadonly) {
           deleteButton.addEventListener("click", showDeleteConfirm);
@@ -2048,6 +2342,76 @@
         render();
       }
 
+      function toggleSubjectFavorite(subject) {
+        subject.isFavorite = !subject.isFavorite;
+        subject.updatedAt = Date.now();
+        saveState();
+        render();
+      }
+
+      function toggleFolderFavorite(folder) {
+        folder.isFavorite = !folder.isFavorite;
+        saveState();
+        render();
+      }
+
+      function updateSubjectReviewDate(subject, value) {
+        subject.reviewAt = value;
+        subject.updatedAt = Date.now();
+        saveState();
+        render();
+      }
+
+      function completeSubjectReview(subject) {
+        const today = new Date().toISOString().slice(0, 10);
+        const history = getReviewHistory(subject);
+
+        if (!history.includes(today)) {
+          history.push(today);
+        }
+
+        subject.reviewHistory = history.sort();
+        subject.reviewAt = "";
+        subject.updatedAt = Date.now();
+        saveState();
+        render();
+      }
+
+      function scheduleSubjectReview(subject, days) {
+        const nextDate = new Date();
+        nextDate.setDate(nextDate.getDate() + days);
+        subject.reviewAt = nextDate.toISOString().slice(0, 10);
+        subject.updatedAt = Date.now();
+        saveState();
+        render();
+      }
+
+      function getReviewHistory(subject) {
+        return Array.isArray(subject.reviewHistory) ? subject.reviewHistory : [];
+      }
+
+      function getReviewState(subject) {
+        if (!subject.reviewAt) {
+          return "none";
+        }
+
+        const today = new Date().toISOString().slice(0, 10);
+        return subject.reviewAt <= today ? "due" : "scheduled";
+      }
+
+      function getSubjectStats(subject) {
+        const noteHtml = subject.noteHtml || plainTextToHtml(subject.note || "");
+        const text = getNoteText(subject);
+        const imageCount = (noteHtml.match(/<img\b/gi) || []).length;
+        const bytes = typeof Blob === "function" ? new Blob([noteHtml]).size : noteHtml.length * 2;
+
+        return {
+          characters: text.length,
+          images: imageCount,
+          bytes,
+        };
+      }
+
       function deleteActiveSubject() {
         const visibleBeforeDelete = getVisibleSubjects();
         const subjectIndex = visibleBeforeDelete.findIndex((item) => item.id === activeId);
@@ -2096,19 +2460,39 @@
           return "전체";
         }
 
-        return state.folders.find((folder) => folder.id === activeFolderId)?.title || "폴더";
+        return getFolderTitle(activeFolderId);
+      }
+
+      function getFolderTitle(folderId) {
+        if (folderId === ALL_FOLDERS_ID) {
+          return "전체";
+        }
+
+        return state.folders.find((folder) => folder.id === folderId)?.title || "폴더";
+      }
+
+      function getActiveFolder() {
+        return state.folders.find((folder) => folder.id === activeFolderId) || null;
       }
 
       function renderFolderBrowser() {
+        const keyword = searchInput.value.trim().toLowerCase();
+        const searchResults = keyword
+          ? state.subjects.filter((subject) => matchesSubjectKeyword(subject, keyword))
+          : [];
         const childFolders =
-          activeFolderId === ALL_FOLDERS_ID
+          keyword
+            ? []
+            : activeFolderId === ALL_FOLDERS_ID
             ? state.folders.filter((folder) => folder.parentId === null)
             : state.folders.filter((folder) => folder.parentId === activeFolderId);
         const files =
-          activeFolderId === ALL_FOLDERS_ID
+          keyword
+            ? searchResults
+            : activeFolderId === ALL_FOLDERS_ID
             ? []
             : state.subjects.filter((subject) => subject.folderId === activeFolderId);
-        const folderTitle = getActiveFolderTitle();
+        const folderTitle = keyword ? "검색 결과" : getActiveFolderTitle();
         const itemCount = childFolders.length + files.length;
 
         main.innerHTML = `
@@ -2116,17 +2500,22 @@
             <div class="browser-header">
               <div>
                 <h2 class="browser-title">${escapeHtml(folderTitle)}</h2>
-                <div class="browser-meta">${childFolders.length}개 폴더 · ${files.length}개 파일</div>
+                <div class="browser-meta">${keyword ? `"${escapeHtml(keyword)}" · ` : ""}${childFolders.length}개 폴더 · ${files.length}개 파일</div>
               </div>
               <div class="browser-actions">
                 ${
-                  activeFolderId === ALL_FOLDERS_ID
+                  activeFolderId === ALL_FOLDERS_ID || keyword
                     ? ""
                     : '<div class="browser-drop-zone" id="parentDropZone">상위로 빼기</div>'
                 }
-                <button class="control-button" id="quickFolderButton" type="button">${activeFolderId === ALL_FOLDERS_ID ? "새 폴더" : "하위 폴더 추가"}</button>
                 ${
-                  activeFolderId === ALL_FOLDERS_ID || activeFolderId === DEFAULT_FOLDER_ID
+                  !keyword && activeFolderId !== ALL_FOLDERS_ID
+                    ? `<button class="control-button${getActiveFolder()?.isFavorite ? " active" : ""}" id="currentFolderFavoriteButton" type="button">${getActiveFolder()?.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}</button>`
+                    : ""
+                }
+                ${keyword ? "" : `<button class="control-button" id="quickFolderButton" type="button">${activeFolderId === ALL_FOLDERS_ID ? "새 폴더" : "하위 폴더 추가"}</button>`}
+                ${
+                  keyword || activeFolderId === ALL_FOLDERS_ID || activeFolderId === DEFAULT_FOLDER_ID
                     ? ""
                     : '<button class="control-button" id="quickSubjectButton" type="button">새 파일 추가</button>'
                 }
@@ -2136,7 +2525,9 @@
               itemCount
                 ? '<div class="browser-grid" id="browserGrid"></div>'
                 : `<div class="browser-empty"><div><strong>비어 있습니다</strong><br>${
-                    activeFolderId === ALL_FOLDERS_ID
+                    keyword
+                      ? "검색 결과가 없습니다."
+                      : activeFolderId === ALL_FOLDERS_ID
                       ? "새 폴더를 만들면 이곳에 표시됩니다."
                       : "하위 폴더나 과목 파일을 추가해보세요."
                   }</div></div>`
@@ -2148,13 +2539,25 @@
         const quickFolderButton = document.querySelector("#quickFolderButton");
         const quickSubjectButton = document.querySelector("#quickSubjectButton");
         const parentDropZone = document.querySelector("#parentDropZone");
+        const currentFolderFavoriteButton = document.querySelector("#currentFolderFavoriteButton");
 
-        quickFolderButton.addEventListener("click", () =>
-          showCreateFolderModal(activeFolderId === ALL_FOLDERS_ID ? null : activeFolderId),
-        );
+        if (quickFolderButton) {
+          quickFolderButton.addEventListener("click", () =>
+            showCreateFolderModal(activeFolderId === ALL_FOLDERS_ID ? null : activeFolderId),
+          );
+        }
 
         if (quickSubjectButton) {
           quickSubjectButton.addEventListener("click", () => showCreateSubjectModal(activeFolderId));
+        }
+
+        if (currentFolderFavoriteButton) {
+          currentFolderFavoriteButton.addEventListener("click", () => {
+            const folder = getActiveFolder();
+            if (folder) {
+              toggleFolderFavorite(folder);
+            }
+          });
         }
 
         if (parentDropZone) {
@@ -2182,25 +2585,26 @@
           });
           attachFolderDrag(item, folder);
           attachBrowserDropTarget(item, folder.id);
+          configureBrowserFavorite(item, folder, () => toggleFolderFavorite(folder));
 
           browserGrid.append(item);
         });
 
         files.forEach((subject) => {
+          const stats = getSubjectStats(subject);
           const item = createBrowserItem({
             icon: "파일",
             name: subject.title,
-            detail: `${getNoteText(subject).length}자`,
+            detail: `${stats.characters}자 · ${stats.images}개 이미지 · ${getFolderTitle(subject.folderId)}`,
           });
           item.draggable = !isProtectedDefaultSubject(subject);
           item.dataset.subjectId = subject.id;
 
           item.addEventListener("click", () => {
-            activeId = subject.id;
-            saveState();
-            render();
+            openSubject(subject.id);
           });
           attachSubjectDrag(item, subject);
+          configureBrowserFavorite(item, subject, () => toggleSubjectFavorite(subject));
 
           browserGrid.append(item);
         });
@@ -2297,18 +2701,39 @@
       }
 
       function createBrowserItem({ icon, name, detail }) {
-        const item = document.createElement("button");
+        const item = document.createElement("div");
         item.className = "browser-item";
-        item.type = "button";
+        item.role = "button";
+        item.tabIndex = 0;
         item.innerHTML = `
           <span class="browser-icon">${icon}</span>
           <span>
             <span class="browser-name"></span>
             <span class="browser-detail">${detail}</span>
           </span>
+          <button class="browser-favorite" type="button" aria-label="즐겨찾기">☆</button>
         `;
         item.querySelector(".browser-name").textContent = name;
         return item;
+      }
+
+      function configureBrowserFavorite(item, target, onToggle) {
+        const button = item.querySelector(".browser-favorite");
+        if (!button) {
+          return;
+        }
+
+        button.classList.toggle("active", Boolean(target.isFavorite));
+        button.textContent = target.isFavorite ? "★" : "☆";
+        button.setAttribute(
+          "aria-label",
+          target.isFavorite ? "즐겨찾기 해제" : "즐겨찾기 추가",
+        );
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          onToggle();
+        });
       }
 
       function escapeHtml(value) {
@@ -2719,14 +3144,48 @@
           return;
         }
 
+        if (file.type === "image/gif" || file.type === "image/svg+xml") {
+          insertImageFileRaw(file, subject, editor);
+          return;
+        }
+
         const reader = new FileReader();
         reader.addEventListener("load", () => {
-          insertHtmlAtCursor(
-            `<img src="${reader.result}" alt="${escapeHtml(file.name)}"><br>`,
-          );
-          updateNote(subject, editor);
+          const image = new Image();
+
+          image.addEventListener("load", () => {
+            const maxSize = 1600;
+            const ratio = Math.min(1, maxSize / Math.max(image.width, image.height));
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.max(1, Math.round(image.width * ratio));
+            canvas.height = Math.max(1, Math.round(image.height * ratio));
+            const context = canvas.getContext("2d");
+
+            if (!context) {
+              insertImageData(reader.result, file.name, subject, editor);
+              return;
+            }
+
+            context.drawImage(image, 0, 0, canvas.width, canvas.height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.82);
+            insertImageData(compressed, file.name, subject, editor);
+          });
+
+          image.addEventListener("error", () => insertImageData(reader.result, file.name, subject, editor));
+          image.src = reader.result;
         });
         reader.readAsDataURL(file);
+      }
+
+      function insertImageFileRaw(file, subject, editor) {
+        const reader = new FileReader();
+        reader.addEventListener("load", () => insertImageData(reader.result, file.name, subject, editor));
+        reader.readAsDataURL(file);
+      }
+
+      function insertImageData(source, fileName, subject, editor) {
+        insertHtmlAtCursor(`<img src="${source}" alt="${escapeHtml(fileName)}"><br>`);
+        updateNote(subject, editor);
       }
 
       async function pastePlainTextFromClipboard(subject, editor) {
@@ -3005,6 +3464,7 @@
 
       function render() {
         renderFolders();
+        renderQuickAccess();
         renderEditor();
         renderStorageUsage();
       }
@@ -3017,6 +3477,9 @@
       }
 
       function exportBackup() {
+        state.lastBackupAt = Date.now();
+        saveState();
+
         const backup = {
           version: 2,
           exportedAt: new Date().toISOString(),
@@ -3179,6 +3642,7 @@
           id: crypto.randomUUID(),
           title,
           parentId,
+          isFavorite: false,
         };
 
         state.folders.push(folder);
@@ -3206,6 +3670,10 @@
           note: "",
           isReadonly: false,
           isLocked: false,
+          isFavorite: false,
+          reviewAt: "",
+          reviewHistory: [],
+          lastOpenedAt: Date.now(),
           updatedAt: Date.now(),
         };
 
@@ -3251,7 +3719,14 @@
         showCreateSubjectModal(activeFolderId, title);
       });
 
-      searchInput.addEventListener("input", renderFolders);
+      searchInput.addEventListener("input", () => {
+        if (searchInput.value.trim()) {
+          activeId = null;
+          activeFolderId = ALL_FOLDERS_ID;
+        }
+
+        render();
+      });
       exportButton.addEventListener("click", exportBackup);
       exportNoteButton.addEventListener("click", exportCurrentNote);
       importInput.addEventListener("change", () => {

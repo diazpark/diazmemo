@@ -693,6 +693,18 @@
         justify-self: start;
       }
 
+      .toolbar-right-actions {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        grid-column: 2 / -1;
+        justify-self: end;
+      }
+
+      .toolbar-right-actions .control-button {
+        justify-self: end;
+      }
+
       .format-bar {
         display: flex;
         flex-wrap: wrap;
@@ -828,34 +840,25 @@
         font-weight: 800;
       }
 
-      .review-date {
-        width: 140px;
-        border: 1px solid var(--line);
-        border-radius: 8px;
-        background: #fbfdfb;
-        color: var(--text);
-        padding: 9px 10px;
-        outline: none;
-      }
-
-      .review-shortcuts {
+      .review-history {
+        grid-column: 1 / -1;
         display: flex;
         flex-wrap: wrap;
         gap: 6px;
+        align-items: center;
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 800;
       }
 
-      .review-chip {
+      .review-history-date {
         border: 1px solid var(--line);
         border-radius: 8px;
         background: #ffffff;
         color: var(--accent-dark);
-        padding: 8px 9px;
-        font-size: 12px;
+        padding: 5px 7px;
+        font-size: 11px;
         font-weight: 900;
-      }
-
-      .review-chip:hover {
-        background: var(--panel-strong);
       }
 
       .delete-button {
@@ -2113,14 +2116,20 @@
         }
 
         const stats = getSubjectStats(subject);
-        const reviewState = getReviewState(subject);
-        const reviewCount = getReviewHistory(subject).length;
+        const reviewHistory = getReviewHistory(subject);
+        const reviewCount = reviewHistory.length;
+        const lastReviewDate = reviewHistory[reviewHistory.length - 1] || "";
 
         main.innerHTML = `
           <section class="workspace">
             <div class="toolbar">
               <input class="note-title" id="noteTitle" type="text" aria-label="과목 이름" />
-              <div class="note-stats">${stats.characters}자 · 이미지 ${stats.images}개 · 파일 용량 ${formatBytes(stats.bytes)} · 복습 ${reviewCount}회${subject.reviewAt ? ` · 다음 ${escapeHtml(subject.reviewAt)}${reviewState === "due" ? " (오늘)" : ""}` : ""}</div>
+              <div class="note-stats">${stats.characters}자 · 이미지 ${stats.images}개 · 파일 용량 ${formatBytes(stats.bytes)} · 복습 ${reviewCount}회${lastReviewDate ? ` · 최근 복습 ${escapeHtml(lastReviewDate)}` : ""}</div>
+              ${
+                reviewHistory.length
+                  ? `<div class="review-history">복습한 날짜 ${reviewHistory.map((date) => `<span class="review-history-date">${escapeHtml(date)}</span>`).join("")}</div>`
+                  : '<div class="review-history">복습한 날짜 없음</div>'
+              }
               ${
                 isReadonlyTemplate
                   ? ""
@@ -2135,15 +2144,10 @@
                   ? '<span class="readonly-badge">읽기 전용 양식</span><button class="copy-button" id="copyButton" type="button">양식 복사</button>'
                   : `<button class="control-button${subject.isReadonly ? " active" : ""}" id="readonlyToggle" type="button">${subject.isReadonly ? "읽기 전용 해제" : "읽기 전용"}</button>
                     <button class="control-button${subject.isFavorite ? " active" : ""}" id="favoriteToggle" type="button">${subject.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}</button>
-                    <input class="review-date" id="reviewDate" type="date" value="${escapeHtml(subject.reviewAt || "")}" aria-label="복습일" title="복습일" />
-                    <button class="control-button" id="reviewCompleteButton" type="button">복습 완료</button>
-                    <div class="review-shortcuts" aria-label="다음 복습 추천">
-                      <button class="review-chip" type="button" data-review-days="1">+1일</button>
-                      <button class="review-chip" type="button" data-review-days="3">+3일</button>
-                      <button class="review-chip" type="button" data-review-days="7">+7일</button>
-                      <button class="review-chip" type="button" data-review-days="14">+14일</button>
-                    </div>
-                    <button class="control-button" id="lockToggle" type="button">잠금</button>`
+                    <div class="toolbar-right-actions">
+                      <button class="control-button" id="reviewCompleteButton" type="button">복습 완료</button>
+                      <button class="control-button" id="lockToggle" type="button">잠금</button>
+                    </div>`
               }
             </div>
             <div class="format-bar${isReadonlyFile ? " is-hidden" : ""}" aria-label="서식 도구">
@@ -2180,9 +2184,7 @@
         const readonlyToggle = document.querySelector("#readonlyToggle");
         const lockToggle = document.querySelector("#lockToggle");
         const favoriteToggle = document.querySelector("#favoriteToggle");
-        const reviewDate = document.querySelector("#reviewDate");
         const reviewCompleteButton = document.querySelector("#reviewCompleteButton");
-        const reviewShortcutButtons = document.querySelectorAll("[data-review-days]");
         const toolbarExportNoteButton = document.querySelector("#toolbarExportNoteButton");
         const formatButtons = document.querySelectorAll("[data-command]");
         const insertButtons = document.querySelectorAll("[data-insert]");
@@ -2208,13 +2210,7 @@
         readonlyToggle.addEventListener("click", () => toggleSubjectReadonly(subject));
         lockToggle.addEventListener("click", () => toggleSubjectLock(subject));
         favoriteToggle.addEventListener("click", () => toggleSubjectFavorite(subject));
-        reviewDate.addEventListener("change", () => updateSubjectReviewDate(subject, reviewDate.value));
         reviewCompleteButton.addEventListener("click", () => completeSubjectReview(subject));
-        reviewShortcutButtons.forEach((button) => {
-          button.addEventListener("click", () =>
-            scheduleSubjectReview(subject, Number(button.dataset.reviewDays)),
-          );
-        });
         toolbarExportNoteButton.addEventListener("click", exportCurrentNote);
         if (!subject.isReadonly) {
           deleteButton.addEventListener("click", showDeleteConfirm);
@@ -2355,13 +2351,6 @@
         render();
       }
 
-      function updateSubjectReviewDate(subject, value) {
-        subject.reviewAt = value;
-        subject.updatedAt = Date.now();
-        saveState();
-        render();
-      }
-
       function completeSubjectReview(subject) {
         const today = new Date().toISOString().slice(0, 10);
         const history = getReviewHistory(subject);
@@ -2372,15 +2361,6 @@
 
         subject.reviewHistory = history.sort();
         subject.reviewAt = "";
-        subject.updatedAt = Date.now();
-        saveState();
-        render();
-      }
-
-      function scheduleSubjectReview(subject, days) {
-        const nextDate = new Date();
-        nextDate.setDate(nextDate.getDate() + days);
-        subject.reviewAt = nextDate.toISOString().slice(0, 10);
         subject.updatedAt = Date.now();
         saveState();
         render();

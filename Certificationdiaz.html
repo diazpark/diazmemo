@@ -312,6 +312,52 @@
         padding: 10px 12px;
       }
 
+      .status-card-header {
+        display: flex;
+        gap: 8px;
+        align-items: center;
+        justify-content: space-between;
+      }
+
+      .status-card-title {
+        color: var(--muted);
+        font-size: 12px;
+        font-weight: 900;
+      }
+
+      .status-toggle {
+        display: grid;
+        place-items: center;
+        width: 26px;
+        height: 26px;
+        border: 1px solid var(--line);
+        border-radius: 8px;
+        background: #ffffff;
+        color: var(--accent-dark);
+        font-size: 13px;
+        font-weight: 900;
+      }
+
+      .status-toggle:hover {
+        background: var(--panel-strong);
+      }
+
+      .status-card-body {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+
+      .status-card.collapsed .status-card-body {
+        display: none;
+      }
+
+      .sidebar-status {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
       .storage-meter strong {
         display: block;
         font-size: 13px;
@@ -373,7 +419,7 @@
         color: var(--danger);
       }
 
-      .quick-access {
+      .quick-access .status-card-body {
         display: flex;
         flex-direction: column;
         gap: 8px;
@@ -622,7 +668,13 @@
         font-weight: 900;
       }
 
+      .browser-copy {
+        min-width: 0;
+        overflow: hidden;
+      }
+
       .browser-name {
+        display: block;
         overflow: hidden;
         text-overflow: ellipsis;
         white-space: nowrap;
@@ -636,8 +688,29 @@
         margin-top: 3px;
       }
 
-      .browser-favorite {
+      .hidden-badge {
+        display: inline-block;
+        border-radius: 6px;
+        background: #eef0f2;
+        color: var(--muted);
+        margin-right: 5px;
+        padding: 2px 5px;
+        font-size: 11px;
+        font-weight: 900;
+      }
+
+      .browser-card-actions {
+        display: flex;
+        gap: 6px;
+        align-items: center;
+        justify-self: end;
+      }
+
+      .browser-favorite,
+      .browser-hide,
+      .browser-rename {
         display: grid;
+        flex: 0 0 auto;
         place-items: center;
         width: 34px;
         height: 34px;
@@ -657,6 +730,28 @@
 
       .browser-favorite:hover {
         background: var(--panel-strong);
+      }
+
+      .browser-hide,
+      .browser-rename {
+        width: auto;
+        min-width: 48px;
+        padding: 0 9px;
+        color: var(--accent-dark);
+        font-size: 12px;
+      }
+
+      .browser-hide.active {
+        border-color: rgba(47, 125, 87, 0.34);
+        background: var(--panel-strong);
+      }
+
+      .browser-hide.is-hidden {
+        display: none;
+      }
+
+      .browser-rename.is-hidden {
+        display: none;
       }
 
       .browser-empty {
@@ -1187,6 +1282,34 @@
           <p>왼쪽에서 과목을 고르고 오른쪽에 공부 내용을 적어두세요.</p>
         </div>
 
+        <div class="sidebar-status" aria-label="학습 상태">
+          <div class="quick-access status-card" id="quickAccessCard">
+            <div class="status-card-header">
+              <span class="status-card-title">학습 요약</span>
+              <button class="status-toggle" id="quickAccessToggle" type="button" aria-expanded="true">−</button>
+            </div>
+            <div class="status-card-body" id="quickAccess"></div>
+          </div>
+
+          <div class="storage-meter status-card" id="storageCard" aria-label="저장 용량">
+            <div class="status-card-header">
+              <span class="status-card-title">저장 확인</span>
+              <button class="status-toggle" id="storageToggle" type="button" aria-expanded="true">−</button>
+            </div>
+            <div class="status-card-body">
+              <div>
+                <strong id="storageUsage">저장 용량 계산 중</strong>
+                <span id="storageDetail">예상 한도 5MB 기준</span>
+              </div>
+              <div class="storage-bar" aria-hidden="true">
+                <span class="storage-bar-fill" id="storageBar"></span>
+              </div>
+              <p class="storage-warning">주의: 브라우저 데이터 삭제 시 메모가 사라질 수 있습니다.</p>
+              <div class="backup-reminder" id="backupReminder">백업 상태 확인 중</div>
+            </div>
+          </div>
+        </div>
+
         <button class="sidebar-tools-toggle" id="toolsToggle" type="button" aria-expanded="false">
           <span class="toggle-icon" id="toolsToggleIcon">+</span>
           <span class="toggle-text" id="toolsToggleText">검색/추가 열기</span>
@@ -1219,20 +1342,6 @@
         </section>
 
         <div class="subject-list" id="subjectList"></div>
-
-        <div class="quick-access" id="quickAccess"></div>
-
-        <div class="storage-meter" aria-label="저장 용량">
-          <div>
-            <strong id="storageUsage">저장 용량 계산 중</strong>
-            <span id="storageDetail">예상 한도 5MB 기준</span>
-          </div>
-          <div class="storage-bar" aria-hidden="true">
-            <span class="storage-bar-fill" id="storageBar"></span>
-          </div>
-          <p class="storage-warning">주의: 브라우저 데이터 삭제 시 메모가 사라질 수 있습니다.</p>
-          <div class="backup-reminder" id="backupReminder">백업 상태 확인 중</div>
-        </div>
       </aside>
 
       <main class="main" id="main"></main>
@@ -1338,8 +1447,12 @@
       const exportButton = document.querySelector("#exportButton");
       const exportNoteButton = document.querySelector("#exportNoteButton");
       const importInput = document.querySelector("#importInput");
+      const quickAccessCard = document.querySelector("#quickAccessCard");
+      const quickAccessToggle = document.querySelector("#quickAccessToggle");
       const subjectList = document.querySelector("#subjectList");
       const quickAccess = document.querySelector("#quickAccess");
+      const storageCard = document.querySelector("#storageCard");
+      const storageToggle = document.querySelector("#storageToggle");
       const storageUsage = document.querySelector("#storageUsage");
       const storageDetail = document.querySelector("#storageDetail");
       const storageBar = document.querySelector("#storageBar");
@@ -1351,6 +1464,10 @@
           folders: defaultFolders.map((folder) => ({ ...folder })),
           subjects: defaultSubjects.map((subject) => ({ ...subject })),
           lastBackupAt: null,
+          ui: {
+            quickAccessCollapsed: false,
+            storageCollapsed: false,
+          },
           activeFolderId: ALL_FOLDERS_ID,
           activeId: null,
         };
@@ -1603,6 +1720,7 @@
         const normalizedFolders = folders.map((folder) => ({
           ...folder,
           isFavorite: Boolean(folder.isFavorite),
+          isHidden: Boolean(folder.isHidden),
           parentId:
             folder.parentId === DEFAULT_FOLDER_ID || !folderIds.has(folder.parentId)
               ? null
@@ -1641,6 +1759,10 @@
           folders: normalizedFolders,
           subjects,
           lastBackupAt: savedState.lastBackupAt || null,
+          ui: {
+            quickAccessCollapsed: Boolean(savedState.ui?.quickAccessCollapsed),
+            storageCollapsed: Boolean(savedState.ui?.storageCollapsed),
+          },
           activeId: restoredActiveId,
           activeFolderId: restoredActiveFolderId,
         };
@@ -1748,12 +1870,34 @@
           depth: 0,
         };
         const defaultFolder = state.folders.find((folder) => folder.id === DEFAULT_FOLDER_ID);
-        const defaultFolderRow = defaultFolder ? [{ folder: defaultFolder, depth: 1 }] : [];
+        const defaultFolderRow = defaultFolder && !defaultFolder.isHidden ? [{ folder: defaultFolder, depth: 1 }] : [];
         const regularRows = getFolderTreeRows(null, 1).filter(
-          ({ folder }) => folder.id !== DEFAULT_FOLDER_ID,
+          ({ folder }) => folder.id !== DEFAULT_FOLDER_ID && !isFolderHiddenInSidebar(folder),
         );
 
         return [allFolderRow, ...defaultFolderRow, ...regularRows];
+      }
+
+      function isFolderHiddenInSidebar(folder) {
+        if (folder.isHidden) {
+          return true;
+        }
+
+        let parentId = folder.parentId;
+        while (parentId) {
+          const parent = state.folders.find((item) => item.id === parentId);
+          if (!parent) {
+            return false;
+          }
+
+          if (parent.isHidden) {
+            return true;
+          }
+
+          parentId = parent.parentId;
+        }
+
+        return false;
       }
 
       function getVisibleSubjects() {
@@ -2055,8 +2199,6 @@
         }
 
         subject.folderId = folderId;
-        activeFolderId = folderId;
-        activeId = subject.id;
         subject.updatedAt = Date.now();
         saveState();
         render();
@@ -2351,6 +2493,31 @@
         render();
       }
 
+      function toggleFolderHidden(folder) {
+        folder.isHidden = !folder.isHidden;
+
+        if (folder.isHidden && activeFolderId === folder.id) {
+          activeFolderId = ALL_FOLDERS_ID;
+          activeId = null;
+        }
+
+        saveState();
+        render();
+      }
+
+      function renameFolder(folderId, title) {
+        const folder = getFolderById(folderId);
+        const nextTitle = title.trim();
+
+        if (!folder || !nextTitle) {
+          return;
+        }
+
+        folder.title = nextTitle;
+        saveState();
+        render();
+      }
+
       function completeSubjectReview(subject) {
         const today = new Date().toISOString().slice(0, 10);
         const history = getReviewHistory(subject);
@@ -2448,11 +2615,15 @@
           return "전체";
         }
 
-        return state.folders.find((folder) => folder.id === folderId)?.title || "폴더";
+        return getFolderById(folderId)?.title || "폴더";
+      }
+
+      function getFolderById(folderId) {
+        return state.folders.find((folder) => folder.id === folderId) || null;
       }
 
       function getActiveFolder() {
-        return state.folders.find((folder) => folder.id === activeFolderId) || null;
+        return getFolderById(activeFolderId);
       }
 
       function renderFolderBrowser() {
@@ -2493,6 +2664,16 @@
                     ? `<button class="control-button${getActiveFolder()?.isFavorite ? " active" : ""}" id="currentFolderFavoriteButton" type="button">${getActiveFolder()?.isFavorite ? "즐겨찾기 해제" : "즐겨찾기"}</button>`
                     : ""
                 }
+                ${
+                  !keyword && activeFolderId !== ALL_FOLDERS_ID
+                    ? `<button class="control-button${getActiveFolder()?.isHidden ? " active" : ""}" id="currentFolderHideButton" type="button">${getActiveFolder()?.isHidden ? "숨김 해제" : "숨김"}</button>`
+                    : ""
+                }
+                ${
+                  !keyword && activeFolderId !== ALL_FOLDERS_ID
+                    ? '<button class="control-button" id="currentFolderRenameButton" type="button">이름 변경</button>'
+                    : ""
+                }
                 ${keyword ? "" : `<button class="control-button" id="quickFolderButton" type="button">${activeFolderId === ALL_FOLDERS_ID ? "새 폴더" : "하위 폴더 추가"}</button>`}
                 ${
                   keyword || activeFolderId === ALL_FOLDERS_ID || activeFolderId === DEFAULT_FOLDER_ID
@@ -2520,6 +2701,8 @@
         const quickSubjectButton = document.querySelector("#quickSubjectButton");
         const parentDropZone = document.querySelector("#parentDropZone");
         const currentFolderFavoriteButton = document.querySelector("#currentFolderFavoriteButton");
+        const currentFolderHideButton = document.querySelector("#currentFolderHideButton");
+        const currentFolderRenameButton = document.querySelector("#currentFolderRenameButton");
 
         if (quickFolderButton) {
           quickFolderButton.addEventListener("click", () =>
@@ -2540,6 +2723,24 @@
           });
         }
 
+        if (currentFolderHideButton) {
+          currentFolderHideButton.addEventListener("click", () => {
+            const folder = getActiveFolder();
+            if (folder) {
+              toggleFolderHidden(folder);
+            }
+          });
+        }
+
+        if (currentFolderRenameButton) {
+          currentFolderRenameButton.addEventListener("click", () => {
+            const folder = getActiveFolder();
+            if (folder) {
+              showRenameFolderModal(folder.id);
+            }
+          });
+        }
+
         if (parentDropZone) {
           attachBrowserDropTarget(parentDropZone, getParentDropTargetId());
         }
@@ -2552,7 +2753,7 @@
           const item = createBrowserItem({
             icon: "폴더",
             name: folder.title,
-            detail: `${getFolderSubjectCount(folder.id)}개 파일 포함`,
+            detail: `${folder.isHidden ? '<span class="hidden-badge">숨김</span>' : ""}${getFolderSubjectCount(folder.id)}개 파일 포함`,
           });
           item.draggable = folder.id !== DEFAULT_FOLDER_ID;
           item.dataset.folderId = folder.id;
@@ -2566,6 +2767,8 @@
           attachFolderDrag(item, folder);
           attachBrowserDropTarget(item, folder.id);
           configureBrowserFavorite(item, folder, () => toggleFolderFavorite(folder));
+          configureBrowserHide(item, folder);
+          configureBrowserRename(item, folder);
 
           browserGrid.append(item);
         });
@@ -2687,11 +2890,15 @@
         item.tabIndex = 0;
         item.innerHTML = `
           <span class="browser-icon">${icon}</span>
-          <span>
+          <span class="browser-copy">
             <span class="browser-name"></span>
             <span class="browser-detail">${detail}</span>
           </span>
-          <button class="browser-favorite" type="button" aria-label="즐겨찾기">☆</button>
+          <span class="browser-card-actions">
+            <button class="browser-rename is-hidden" type="button">변경</button>
+            <button class="browser-hide is-hidden" type="button">숨김</button>
+            <button class="browser-favorite" type="button" aria-label="즐겨찾기">☆</button>
+          </span>
         `;
         item.querySelector(".browser-name").textContent = name;
         return item;
@@ -2713,6 +2920,39 @@
           event.preventDefault();
           event.stopPropagation();
           onToggle();
+        });
+      }
+
+      function configureBrowserHide(item, folder) {
+        const button = item.querySelector(".browser-hide");
+        if (!button) {
+          return;
+        }
+
+        button.classList.remove("is-hidden");
+        button.classList.toggle("active", Boolean(folder.isHidden));
+        button.textContent = folder.isHidden ? "해제" : "숨김";
+        button.setAttribute("aria-label", folder.isHidden ? "숨김 해제" : "폴더 숨김");
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          toggleFolderHidden(folder);
+        });
+      }
+
+      function configureBrowserRename(item, folder) {
+        const button = item.querySelector(".browser-rename");
+        if (!button) {
+          return;
+        }
+
+        button.classList.remove("is-hidden");
+        button.dataset.folderId = folder.id;
+        button.setAttribute("aria-label", "폴더명 변경");
+        button.addEventListener("click", (event) => {
+          event.preventDefault();
+          event.stopPropagation();
+          showRenameFolderModal(button.dataset.folderId);
         });
       }
 
@@ -2905,6 +3145,23 @@
           inputValue: initialValue,
           confirmLabel: "추가",
           onConfirm: (title) => createFolder(title, parentId),
+        });
+      }
+
+      function showRenameFolderModal(folderId) {
+        const folder = getFolderById(folderId);
+
+        if (!folder) {
+          return;
+        }
+
+        showConfirmModal({
+          title: "폴더명 변경",
+          message: "새 폴더 이름을 입력하세요.",
+          inputLabel: "폴더 이름",
+          inputValue: folder.title,
+          confirmLabel: "변경",
+          onConfirm: (title) => renameFolder(folderId, title),
         });
       }
 
@@ -3443,6 +3700,7 @@
       }
 
       function render() {
+        renderStatusCards();
         renderFolders();
         renderQuickAccess();
         renderEditor();
@@ -3454,6 +3712,36 @@
         toolsToggle.setAttribute("aria-expanded", String(toolsOpen));
         toolsToggleIcon.textContent = toolsOpen ? "×" : "+";
         toolsToggleText.textContent = toolsOpen ? "검색/추가 닫기" : "검색/추가 열기";
+      }
+
+      function renderStatusCards() {
+        renderStatusCard({
+          card: quickAccessCard,
+          toggle: quickAccessToggle,
+          collapsed: Boolean(state.ui?.quickAccessCollapsed),
+        });
+        renderStatusCard({
+          card: storageCard,
+          toggle: storageToggle,
+          collapsed: Boolean(state.ui?.storageCollapsed),
+        });
+      }
+
+      function renderStatusCard({ card, toggle, collapsed }) {
+        if (!card || !toggle) {
+          return;
+        }
+
+        card.classList.toggle("collapsed", collapsed);
+        toggle.textContent = collapsed ? "+" : "−";
+        toggle.setAttribute("aria-expanded", String(!collapsed));
+      }
+
+      function toggleStatusCard(key) {
+        state.ui = state.ui || {};
+        state.ui[key] = !state.ui[key];
+        saveState();
+        renderStatusCards();
       }
 
       function exportBackup() {
@@ -3623,6 +3911,7 @@
           title,
           parentId,
           isFavorite: false,
+          isHidden: false,
         };
 
         state.folders.push(folder);
@@ -3707,6 +3996,8 @@
 
         render();
       });
+      quickAccessToggle.addEventListener("click", () => toggleStatusCard("quickAccessCollapsed"));
+      storageToggle.addEventListener("click", () => toggleStatusCard("storageCollapsed"));
       exportButton.addEventListener("click", exportBackup);
       exportNoteButton.addEventListener("click", exportCurrentNote);
       importInput.addEventListener("change", () => {

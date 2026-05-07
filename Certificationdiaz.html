@@ -615,7 +615,7 @@
 
       .browser-item {
         display: grid;
-        grid-template-columns: auto minmax(0, 1fr) auto;
+        grid-template-columns: auto minmax(0, 1fr);
         gap: 12px;
         align-items: center;
         min-height: 72px;
@@ -701,6 +701,8 @@
 
       .browser-card-actions {
         display: flex;
+        grid-column: 1 / -1;
+        flex-wrap: wrap;
         gap: 6px;
         align-items: center;
         justify-self: end;

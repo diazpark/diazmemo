@@ -1752,9 +1752,9 @@
           : null;
         const restoredActiveFolderId = restoredActiveId
           ? subjects.find((subject) => subject.id === restoredActiveId).folderId
-          : folderIds.has(savedState.activeFolderId)
+          : savedState.activeFolderId === ALL_FOLDERS_ID || folderIds.has(savedState.activeFolderId)
             ? savedState.activeFolderId
-            : DEFAULT_FOLDER_ID;
+            : ALL_FOLDERS_ID;
 
         return {
           ...savedState,

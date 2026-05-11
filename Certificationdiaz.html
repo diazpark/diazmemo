@@ -537,7 +537,6 @@
         display: flex;
         min-height: calc(100vh - 56px);
         flex-direction: column;
-        overflow: hidden;
         border: 1px solid var(--line);
         border-radius: 8px;
         background: var(--panel);
@@ -802,12 +801,20 @@
         justify-self: end;
       }
 
+      .format-dock {
+        position: sticky;
+        top: 0;
+        z-index: 9;
+        border-bottom: 1px solid var(--line);
+        background: #fbfdfb;
+        box-shadow: 0 8px 18px rgba(28, 50, 34, 0.06);
+      }
+
       .format-bar {
         display: flex;
         flex-wrap: wrap;
         gap: 8px;
         align-items: center;
-        border-bottom: 1px solid var(--line);
         background: #fbfdfb;
         padding: 10px 16px;
       }
@@ -817,7 +824,7 @@
         flex-wrap: wrap;
         gap: 8px;
         align-items: center;
-        border-bottom: 1px solid var(--line);
+        border-top: 1px solid var(--line);
         background: #ffffff;
         padding: 10px 16px;
       }
@@ -2310,29 +2317,31 @@
                     </div>`
               }
             </div>
-            <div class="format-bar${isReadonlyFile ? " is-hidden" : ""}" aria-label="서식 도구">
-              <select class="font-size-select" id="fontSize" aria-label="글꼴 크기" title="글꼴 크기">
-                <option value="">크기</option>
-                <option value="2">작게</option>
-                <option value="3">보통</option>
-                <option value="4">크게</option>
-                <option value="5">아주 크게</option>
-              </select>
-              <button class="format-button" type="button" data-command="bold" title="굵게: Cmd/Ctrl+B">B</button>
-              <button class="format-button" type="button" data-command="italic" title="기울임: Cmd/Ctrl+I">I</button>
-              <button class="format-button underline" type="button" data-command="underline" title="밑줄: Cmd/Ctrl+U">U</button>
-              <button class="format-button strike" type="button" data-command="strikeThrough" title="취소선: Alt/Option+Shift+5">S</button>
-              <button class="format-button" type="button" id="listMenuButton" title="목록 메뉴">목록</button>
-              <button class="format-button" type="button" id="colorMenuButton" title="색상 메뉴">색상</button>
-              <button class="format-button" type="button" id="tableMenuButton" title="표 메뉴">표</button>
-              <button class="format-button" type="button" data-insert="link" title="링크 삽입: Cmd/Ctrl+K">링크</button>
-              <button class="format-button" type="button" data-insert="image" title="이미지 삽입">이미지</button>
-              <button class="format-button" type="button" id="plainPasteButton" title="텍스트만 붙여넣기">텍스트 붙여넣기</button>
-              <button class="format-button" type="button" data-command="removeFormat" title="서식 지우기">지움</button>
-              <span class="format-status" id="formatStatus">선택값 없음</span>
-              <input class="image-input" id="imageInput" type="file" accept="image/*" />
+            <div class="format-dock${isReadonlyFile ? " is-hidden" : ""}">
+              <div class="format-bar" aria-label="서식 도구">
+                <select class="font-size-select" id="fontSize" aria-label="글꼴 크기" title="글꼴 크기">
+                  <option value="">크기</option>
+                  <option value="2">작게</option>
+                  <option value="3">보통</option>
+                  <option value="4">크게</option>
+                  <option value="5">아주 크게</option>
+                </select>
+                <button class="format-button" type="button" data-command="bold" title="굵게: Cmd/Ctrl+B">B</button>
+                <button class="format-button" type="button" data-command="italic" title="기울임: Cmd/Ctrl+I">I</button>
+                <button class="format-button underline" type="button" data-command="underline" title="밑줄: Cmd/Ctrl+U">U</button>
+                <button class="format-button strike" type="button" data-command="strikeThrough" title="취소선: Alt/Option+Shift+5">S</button>
+                <button class="format-button" type="button" id="listMenuButton" title="목록 메뉴">목록</button>
+                <button class="format-button" type="button" id="colorMenuButton" title="색상 메뉴">색상</button>
+                <button class="format-button" type="button" id="tableMenuButton" title="표 메뉴">표</button>
+                <button class="format-button" type="button" data-insert="link" title="링크 삽입: Cmd/Ctrl+K">링크</button>
+                <button class="format-button" type="button" data-insert="image" title="이미지 삽입">이미지</button>
+                <button class="format-button" type="button" id="plainPasteButton" title="텍스트만 붙여넣기">텍스트 붙여넣기</button>
+                <button class="format-button" type="button" data-command="removeFormat" title="서식 지우기">지움</button>
+                <span class="format-status" id="formatStatus">선택값 없음</span>
+                <input class="image-input" id="imageInput" type="file" accept="image/*" />
+              </div>
+              <div class="format-panel" id="formatPanel" aria-live="polite"></div>
             </div>
-            <div class="format-panel" id="formatPanel" aria-live="polite"></div>
             <div class="editor${isReadonlyFile ? " readonly" : ""}" id="noteEditor" contenteditable="${isReadonlyFile ? "false" : "true"}" spellcheck="false" data-placeholder="이 과목의 공부 내용을 적어보세요."></div>
           </section>
         `;

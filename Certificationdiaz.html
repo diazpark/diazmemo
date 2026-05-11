@@ -3327,6 +3327,7 @@
           const rowIndex = Array.from(table.rows).indexOf(row);
           activeTableResize = {
             direction: target.direction,
+            resizeAll: event.shiftKey,
             editor,
             subject,
             table,
@@ -3338,6 +3339,8 @@
             startWidth: getColumnWidth(table, cellIndex),
             startTableWidth: table.getBoundingClientRect().width,
             startHeight: getRowHeight(table, rowIndex),
+            startColumnWidths: getTableColumnWidths(table),
+            startRowHeights: getTableRowHeights(table),
           };
           editor.classList.add("table-resizing");
           window.addEventListener("mousemove", handleTableResizeMove);
@@ -3428,9 +3431,19 @@
         return firstRowCell ? firstRowCell.getBoundingClientRect().width : 0;
       }
 
+      function getTableColumnWidths(table) {
+        return Array.from(table.rows[0]?.cells || []).map((cell) =>
+          cell.getBoundingClientRect().width,
+        );
+      }
+
       function getRowHeight(table, rowIndex) {
         const row = table.rows[rowIndex];
         return row ? row.getBoundingClientRect().height : 0;
+      }
+
+      function getTableRowHeights(table) {
+        return Array.from(table.rows).map((row) => row.getBoundingClientRect().height);
       }
 
       function handleTableResizeMove(event) {
@@ -3450,12 +3463,32 @@
         const {
           table,
           cellIndex,
+          resizeAll,
           startX,
           startWidth,
           startTableWidth,
+          startColumnWidths,
         } = activeTableResize;
         const minimumWidth = 48;
         const delta = Math.max(minimumWidth - startWidth, event.clientX - startX);
+
+        if (resizeAll) {
+          let totalWidth = 0;
+          startColumnWidths.forEach((width, index) => {
+            const nextWidth = Math.max(minimumWidth, width + delta);
+            const col = table.querySelectorAll("colgroup col")[index];
+
+            if (col) {
+              col.style.width = `${Math.round(nextWidth)}px`;
+            }
+
+            applyColumnWidth(table, index, nextWidth);
+            totalWidth += nextWidth;
+          });
+          table.style.width = `${Math.round(Math.max(minimumWidth, totalWidth))}px`;
+          return;
+        }
+
         const nextWidth = Math.max(minimumWidth, startWidth + delta);
         const cols = table.querySelectorAll("colgroup col");
         const targetCol = cols[cellIndex];
@@ -3480,11 +3513,21 @@
         const {
           table,
           rowIndex,
+          resizeAll,
           startY,
           startHeight,
+          startRowHeights,
         } = activeTableResize;
         const minimumHeight = 38;
         const delta = Math.max(minimumHeight - startHeight, event.clientY - startY);
+
+        if (resizeAll) {
+          startRowHeights.forEach((height, index) => {
+            applyRowHeight(table.rows[index], Math.max(minimumHeight, height + delta));
+          });
+          return;
+        }
+
         const nextHeight = Math.max(minimumHeight, startHeight + delta);
         applyRowHeight(table.rows[rowIndex], nextHeight);
       }

@@ -2330,6 +2330,9 @@
                 <button class="format-button" type="button" data-command="italic" title="기울임: Cmd/Ctrl+I">I</button>
                 <button class="format-button underline" type="button" data-command="underline" title="밑줄: Cmd/Ctrl+U">U</button>
                 <button class="format-button strike" type="button" data-command="strikeThrough" title="취소선: Alt/Option+Shift+5">S</button>
+                <button class="format-button" type="button" data-command="justifyLeft" title="왼쪽 정렬">왼쪽</button>
+                <button class="format-button" type="button" data-command="justifyCenter" title="가운데 정렬">중앙</button>
+                <button class="format-button" type="button" data-command="justifyRight" title="오른쪽 정렬">오른쪽</button>
                 <button class="format-button" type="button" id="listMenuButton" title="목록 메뉴">목록</button>
                 <button class="format-button" type="button" id="colorMenuButton" title="색상 메뉴">색상</button>
                 <button class="format-button" type="button" id="tableMenuButton" title="표 메뉴">표</button>
@@ -3845,6 +3848,9 @@
             "strikeThrough",
             "insertUnorderedList",
             "insertOrderedList",
+            "justifyLeft",
+            "justifyCenter",
+            "justifyRight",
           ];
 
           if (stateCommands.includes(command) && document.queryCommandState(command)) {

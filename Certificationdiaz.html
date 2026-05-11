@@ -3598,16 +3598,16 @@
             return;
           }
 
-          event.preventDefault();
           activeTableCellSelection = {
             editor,
             table: cell.closest("table"),
             startCell: cell,
             currentCell: cell,
+            startX: event.clientX,
+            startY: event.clientY,
             moved: false,
           };
-          clearBrowserSelection();
-          markSelectedTableCells([cell]);
+          clearSelectedTableCells();
           window.addEventListener("mousemove", handleTableCellSelectionMove);
           window.addEventListener("mouseup", finishTableCellSelection, { once: true });
         });
@@ -3635,8 +3635,19 @@
           return;
         }
 
+        const dragDistance = Math.hypot(
+          event.clientX - activeTableCellSelection.startX,
+          event.clientY - activeTableCellSelection.startY,
+        );
+
+        if (dragDistance < 4 && cell === activeTableCellSelection.startCell) {
+          return;
+        }
+
+        event.preventDefault();
+        clearBrowserSelection();
         activeTableCellSelection.currentCell = cell;
-        activeTableCellSelection.moved = cell !== activeTableCellSelection.startCell;
+        activeTableCellSelection.moved = true;
         markSelectedTableCells(
           getTableCellRange(
             activeTableCellSelection.table,
@@ -3654,7 +3665,7 @@
         window.removeEventListener("mousemove", handleTableCellSelectionMove);
 
         if (!activeTableCellSelection.moved) {
-          placeCursorInElement(activeTableCellSelection.startCell);
+          clearSelectedTableCells();
         } else {
           clearBrowserSelection();
         }
@@ -3831,6 +3842,7 @@
       }
 
       function placeCursorInElement(element) {
+        element.closest(".editor")?.focus();
         const range = document.createRange();
         range.selectNodeContents(element);
         range.collapse(false);

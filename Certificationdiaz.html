@@ -3142,11 +3142,24 @@
           ["초록 강조", "#d9ead3", "hiliteColor"],
           ["파랑 강조", "#cfe2f3", "hiliteColor"],
         ];
-        const options = [...textColors, ...highlightColors].map(([label, value, command]) => ({
+        const tableBackgroundColors = [
+          ...highlightColors.map(([label, value]) => [
+            label.replace("강조", "셀 배경"),
+            value,
+            "tableBackground",
+          ]),
+          ["연한 회색 셀 배경", "#eeeeee", "tableBackground"],
+          ["진한 회색 셀 배경", "#b7b7b7", "tableBackground"],
+        ];
+        const options = [...textColors, ...highlightColors, ...tableBackgroundColors].map(([label, value, command]) => ({
           html: `<span class="swatch" style="--swatch-color: ${value}"></span>${escapeHtml(label)}`,
           action: () => {
             editor.focus();
-            applyPaletteColor({ dataset: { paletteCommand: command, value } });
+            if (command === "tableBackground") {
+              applyTableCellBackground(editor, value);
+            } else {
+              applyPaletteColor({ dataset: { paletteCommand: command, value } });
+            }
             updateNote(subject, editor);
             updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus);
           },
@@ -3831,6 +3844,19 @@
         }
 
         document.execCommand(command, false, selectedColor);
+      }
+
+      function applyTableCellBackground(editor, value) {
+        const cell = getClosestTableCellFromSelection(editor);
+
+        if (!cell) {
+          return;
+        }
+
+        const selectedColor = normalizeColor(value);
+        const currentColor = normalizeColor(cell.style.backgroundColor || "");
+        cell.style.backgroundColor = currentColor === selectedColor ? "" : selectedColor;
+        placeCursorInElement(cell);
       }
 
       function updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus) {

@@ -1181,14 +1181,27 @@
         width: 100%;
         border-collapse: collapse;
         margin: 12px 0;
+        table-layout: fixed;
       }
 
       .editor td,
       .editor th {
-        min-width: 90px;
+        min-width: 48px;
         border: 1px solid #bac8be;
         padding: 8px;
         vertical-align: top;
+      }
+
+      .editor.table-resize-column {
+        cursor: col-resize;
+      }
+
+      .editor.table-resize-row {
+        cursor: row-resize;
+      }
+
+      .editor.table-resizing {
+        user-select: none;
       }
 
       .editor th {
@@ -1396,6 +1409,7 @@
         6: "제목",
         7: "큰 제목",
       };
+      const TABLE_RESIZE_EDGE_SIZE = 14;
 
       const defaultSubjects = [
         {
@@ -1435,6 +1449,8 @@
       let toolsOpen = false;
       let draggedFolderId = null;
       let draggedSubjectId = null;
+      let tableResizeHistory = [];
+      let activeTableResize = null;
 
       const toolsToggle = document.querySelector("#toolsToggle");
       const toolsToggleIcon = document.querySelector("#toolsToggleIcon");
@@ -2345,6 +2361,8 @@
         noteTitle.value = subject.title;
         noteTitle.readOnly = isReadonlyFile;
         noteEditor.innerHTML = subject.noteHtml || plainTextToHtml(subject.note || "");
+        tableResizeHistory = [];
+        activeTableResize = null;
 
         if (isReadonlyTemplate) {
           copyButton.addEventListener("click", () => copyTemplateToClipboard(subject, copyButton));
@@ -2372,6 +2390,9 @@
         });
 
         noteEditor.addEventListener("input", () => {
+          if (!activeTableResize) {
+            tableResizeHistory = [];
+          }
           updateNote(subject, noteEditor);
           updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus);
         });
@@ -2395,6 +2416,7 @@
         noteEditor.addEventListener("mouseup", () =>
           updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus),
         );
+        setupTableResize(noteEditor, subject);
         document.onselectionchange = () => {
           const selection = window.getSelection();
           const selectedNode = selection.anchorNode;
@@ -3244,6 +3266,11 @@
       function insertTable(subject, editor) {
         const tableHtml = `
           <table>
+            <colgroup>
+              <col style="width: 33.33%;">
+              <col style="width: 33.33%;">
+              <col style="width: 33.34%;">
+            </colgroup>
             <tbody>
               <tr><td><br></td><td><br></td><td><br></td></tr>
               <tr><td><br></td><td><br></td><td><br></td></tr>
@@ -3253,6 +3280,232 @@
         `;
         insertHtmlAtCursor(tableHtml);
         updateNote(subject, editor);
+      }
+
+      function setupTableResize(editor, subject) {
+        editor.addEventListener("mousemove", (event) => {
+          if (activeTableResize) {
+            return;
+          }
+
+          const target = getTableResizeTarget(event, editor);
+          editor.classList.toggle("table-resize-column", target?.direction === "column");
+          editor.classList.toggle("table-resize-row", target?.direction === "row");
+        });
+
+        editor.addEventListener("mouseleave", () => {
+          if (!activeTableResize) {
+            clearTableResizeCursor(editor);
+          }
+        });
+
+        editor.addEventListener("mousedown", (event) => {
+          const target = getTableResizeTarget(event, editor);
+
+          if (!target) {
+            return;
+          }
+
+          event.preventDefault();
+          const table = target.cell.closest("table");
+          tableResizeHistory.push(editor.innerHTML);
+          tableResizeHistory = tableResizeHistory.slice(-20);
+          ensureTableColgroup(table);
+          normalizeTableColumnWidths(table);
+
+          const row = target.cell.parentElement;
+          const cellIndex = Array.from(row.cells).indexOf(target.cell);
+          const rowIndex = Array.from(table.rows).indexOf(row);
+          activeTableResize = {
+            direction: target.direction,
+            editor,
+            subject,
+            table,
+            row,
+            rowIndex,
+            cellIndex,
+            startX: event.clientX,
+            startY: event.clientY,
+            startWidth: getColumnWidth(table, cellIndex),
+            startTableWidth: table.getBoundingClientRect().width,
+            startHeight: getRowHeight(table, rowIndex),
+          };
+          editor.classList.add("table-resizing");
+          window.addEventListener("mousemove", handleTableResizeMove);
+          window.addEventListener("mouseup", finishTableResize, { once: true });
+        });
+      }
+
+      function getTableResizeTarget(event, editor) {
+        return findNearestTableResizeEdge(event.clientX, event.clientY, editor);
+      }
+
+      function findNearestTableResizeEdge(x, y, editor) {
+        let bestTarget = null;
+
+        editor.querySelectorAll("td, th").forEach((cell) => {
+          const rect = cell.getBoundingClientRect();
+          const insideVertical = y >= rect.top && y <= rect.bottom;
+          const insideHorizontal = x >= rect.left && x <= rect.right;
+          const rightDistance = Math.abs(rect.right - x);
+          const bottomDistance = Math.abs(rect.bottom - y);
+
+          if (insideVertical && rightDistance <= TABLE_RESIZE_EDGE_SIZE) {
+            const score = rightDistance;
+            if (!bestTarget || score < bestTarget.score) {
+              bestTarget = { cell, direction: "column", score };
+            }
+          }
+
+          if (insideHorizontal && bottomDistance <= TABLE_RESIZE_EDGE_SIZE) {
+            const score = bottomDistance;
+            if (!bestTarget || score < bestTarget.score) {
+              bestTarget = { cell, direction: "row", score };
+            }
+          }
+        });
+
+        if (!bestTarget) {
+          return null;
+        }
+
+        return {
+          cell: bestTarget.cell,
+          direction: bestTarget.direction,
+        };
+      }
+
+      function ensureTableColgroup(table) {
+        if (!table || table.querySelector("colgroup")) {
+          return;
+        }
+
+        const columnCount = table.rows[0]?.cells.length || 0;
+        const colgroup = document.createElement("colgroup");
+        const width = columnCount ? 100 / columnCount : 100;
+
+        for (let index = 0; index < columnCount; index += 1) {
+          const col = document.createElement("col");
+          col.style.width = `${width}%`;
+          colgroup.append(col);
+        }
+
+        table.prepend(colgroup);
+      }
+
+      function normalizeTableColumnWidths(table) {
+        if (!table?.rows[0]) {
+          return;
+        }
+
+        ensureTableColgroup(table);
+        const cols = table.querySelectorAll("colgroup col");
+        table.style.width = `${Math.round(table.getBoundingClientRect().width)}px`;
+        Array.from(table.rows[0].cells).forEach((cell, index) => {
+          const width = Math.round(cell.getBoundingClientRect().width);
+          if (cols[index]) {
+            cols[index].style.width = `${width}px`;
+          }
+          Array.from(table.rows).forEach((row) => {
+            if (row.cells[index]) {
+              row.cells[index].style.width = `${width}px`;
+            }
+          });
+        });
+      }
+
+      function getColumnWidth(table, cellIndex) {
+        const firstRowCell = table.rows[0]?.cells[cellIndex];
+        return firstRowCell ? firstRowCell.getBoundingClientRect().width : 0;
+      }
+
+      function getRowHeight(table, rowIndex) {
+        const row = table.rows[rowIndex];
+        return row ? row.getBoundingClientRect().height : 0;
+      }
+
+      function handleTableResizeMove(event) {
+        if (!activeTableResize) {
+          return;
+        }
+
+        if (activeTableResize.direction === "column") {
+          resizeTableColumn(event);
+          return;
+        }
+
+        resizeTableRow(event);
+      }
+
+      function resizeTableColumn(event) {
+        const {
+          table,
+          cellIndex,
+          startX,
+          startWidth,
+          startTableWidth,
+        } = activeTableResize;
+        const minimumWidth = 48;
+        const delta = Math.max(minimumWidth - startWidth, event.clientX - startX);
+        const nextWidth = Math.max(minimumWidth, startWidth + delta);
+        const cols = table.querySelectorAll("colgroup col");
+        const targetCol = cols[cellIndex];
+
+        if (targetCol) {
+          targetCol.style.width = `${Math.round(nextWidth)}px`;
+        }
+
+        applyColumnWidth(table, cellIndex, nextWidth);
+        table.style.width = `${Math.round(Math.max(minimumWidth, startTableWidth + delta))}px`;
+      }
+
+      function applyColumnWidth(table, cellIndex, width) {
+        Array.from(table.rows).forEach((row) => {
+          if (row.cells[cellIndex]) {
+            row.cells[cellIndex].style.width = `${Math.round(width)}px`;
+          }
+        });
+      }
+
+      function resizeTableRow(event) {
+        const {
+          table,
+          rowIndex,
+          startY,
+          startHeight,
+        } = activeTableResize;
+        const minimumHeight = 38;
+        const delta = Math.max(minimumHeight - startHeight, event.clientY - startY);
+        const nextHeight = Math.max(minimumHeight, startHeight + delta);
+        applyRowHeight(table.rows[rowIndex], nextHeight);
+      }
+
+      function applyRowHeight(row, height) {
+        if (!row) {
+          return;
+        }
+
+        row.style.height = `${Math.round(height)}px`;
+        Array.from(row.cells).forEach((cell) => {
+          cell.style.height = `${Math.round(height)}px`;
+        });
+      }
+
+      function finishTableResize() {
+        if (!activeTableResize) {
+          return;
+        }
+
+        const { editor, subject } = activeTableResize;
+        window.removeEventListener("mousemove", handleTableResizeMove);
+        editor.classList.remove("table-resizing");
+        clearTableResizeCursor(editor);
+        activeTableResize = null;
+        updateNote(subject, editor);
+      }
+
+      function clearTableResizeCursor(editor) {
+        editor.classList.remove("table-resize-column", "table-resize-row");
       }
 
       function getClosestTableCell(editor) {
@@ -3285,6 +3538,7 @@
 
         const row = cell.parentElement;
         const table = cell.closest("table");
+        ensureTableColgroup(table);
         const rows = Array.from(table.rows);
         const rowIndex = rows.indexOf(row);
         const cellIndex = Array.from(row.cells).indexOf(cell);
@@ -3320,6 +3574,7 @@
             newCell.innerHTML = "<br>";
             sourceCell.after(newCell);
           });
+          insertTableColumnWidth(table, cellIndex);
         }
 
         if (action === "deleteColumn") {
@@ -3331,6 +3586,7 @@
               targetRow.cells[0].innerHTML = "<br>";
             }
           });
+          deleteTableColumnWidth(table, cellIndex, columnCount);
         }
 
         updateNote(subject, editor);
@@ -3339,6 +3595,29 @@
         if (targetCell) {
           placeCursorInElement(targetCell);
         }
+      }
+
+      function insertTableColumnWidth(table, cellIndex) {
+        const colgroup = table.querySelector("colgroup");
+        const cols = Array.from(colgroup?.children || []);
+        const sourceCol = cols[cellIndex] || cols[cols.length - 1];
+        const newCol = document.createElement("col");
+        newCol.style.width = sourceCol?.style.width || `${100 / Math.max(cols.length + 1, 1)}%`;
+
+        if (sourceCol) {
+          sourceCol.after(newCol);
+        } else if (colgroup) {
+          colgroup.append(newCol);
+        }
+      }
+
+      function deleteTableColumnWidth(table, cellIndex, columnCount) {
+        if (columnCount <= 1) {
+          return;
+        }
+
+        const cols = table.querySelectorAll("colgroup col");
+        cols[Math.min(cellIndex, cols.length - 1)]?.remove();
       }
 
       function placeCursorInElement(element) {
@@ -3583,6 +3862,14 @@
         const isCommandKey = event.metaKey || event.ctrlKey;
         const shortcutCommand = getShortcutCommand(event, code, isCommandKey);
 
+        if (isCommandKey && !event.shiftKey && !event.altKey && code === "KeyZ" && tableResizeHistory.length) {
+          event.preventDefault();
+          event.stopPropagation();
+          restoreLastTableResize(subject, editor);
+          updateFormatState(formatButtons, paletteButtons, fontSize, formatStatus);
+          return;
+        }
+
         if (shortcutCommand) {
           event.preventDefault();
           event.stopPropagation();
@@ -3615,6 +3902,17 @@
           document.execCommand("outdent");
           updateNote(subject, editor);
         }
+      }
+
+      function restoreLastTableResize(subject, editor) {
+        const previousHtml = tableResizeHistory.pop();
+
+        if (!previousHtml) {
+          return;
+        }
+
+        editor.innerHTML = previousHtml;
+        updateNote(subject, editor);
       }
 
       function getShortcutCommand(event, code, isCommandKey) {
